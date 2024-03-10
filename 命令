@@ -1,0 +1,54 @@
+sudo apt-get install
+
+//
+
+./configure --prefix=/home/shenhaomin/work/bochs --enable-debugger --enable-disasm --enable-iodebug --enable-x86-debugger --with-x --with-x11 LDFLAGS='-pthread'
+
+//
+
+touch bochsrc.disk
+
+//
+
+megs : 32
+
+romimage: file=/home/shenhaomin/work/bochs/share/bochs/BIOS-bochs-latest
+vgaromimage: file=/home/shenhaomin/work/bochs/share/bochs/VGABIOS-lgpl-latest
+
+boot: disk
+
+log: bochs.out
+
+mouse:enabled=0
+keyboard:keymap=/home/shenhaomin/work/bochs/share/bochs/keymaps/x11-pc-us.map
+
+ata0:enabled=1,ioaddr1=0x1f0,ioaddr2=0x3f0,irq=14
+ata0-master: type=disk, path="hd60M.img", mode=flat,cylinders=121,heads=16,spt=63
+
+#gdbstub:enabled=1,port=1234,text_base=0,data_base=0,bss_base=0
+
+
+//
+
+启动磁盘（在bochs目录下）
+bin/bximage
+
+//
+
+编译
+nasm -o /home/shenhaomin/work/myos/boot/mbr /home/shenhaomin/work/myos/boot/mbr.S -I /home/shenhaomin/work/myos/include/
+nasm -o /home/shenhaomin/work/myos/boot/loader /home/shenhaomin/work/myos/boot/loader.S -I /home/shenhaomin/work/myos/include/
+gcc-4.4 /home/shenhaomin/work/myos/kernel/main.c -o /home/shenhaomin/work/kernel -c -m32
+ld /home/shenhaomin/work/kernel -Ttext 0xc0001500 -e main -o /home/shenhaomin/work/kernel.bin -m elf_i386
+//
+
+加载到磁盘
+dd if=/home/shenhaomin/work/myos/boot/mbr of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=1 conv=notrunc
+dd if=/home/shenhaomin/work/myos/boot/loader of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=4 conv=notrunc seek=2
+dd if=/home/shenhaomin/work/kernel.bin of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=200 conv=notrunc seek=9
+//
+
+启动虚拟机
+bin/bochs -f bochsrc.disk
+
+//

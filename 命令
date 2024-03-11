@@ -38,7 +38,7 @@ bin/bximage
 编译
 nasm -o build/mbr boot/mbr.S -I include/
 nasm -o build/loader boot/loader.S -I include/
-gcc-4.4 -o build/main.o -c -m32 -I lib/kernel/ kernel/main.c 
+gcc-4.4 -o build/main.o -c -m32 -I lib/kernel/  kernel/main.c 
 nasm -f elf -o build/print.o lib/kernel/print.S
 ld -m elf_i386 -Ttext 0x00001500 -e main -o build/kernel.bin  build/main.o build/print.o
 //

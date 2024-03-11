@@ -1,5 +1,5 @@
 sudo apt-get install
-
+普通模式下 ggVG全选   --   d剪切   dG删除   y复制  p粘贴
 //
 
 ./configure --prefix=/home/shenhaomin/work/bochs --enable-debugger --enable-disasm --enable-iodebug --enable-x86-debugger --with-x --with-x11 LDFLAGS='-pthread'
@@ -34,18 +34,19 @@ ata0-master: type=disk, path="hd60M.img", mode=flat,cylinders=121,heads=16,spt=6
 bin/bximage
 
 //
-
+注意要在myos目录下
 编译
-nasm -o /home/shenhaomin/work/myos/boot/mbr /home/shenhaomin/work/myos/boot/mbr.S -I /home/shenhaomin/work/myos/include/
-nasm -o /home/shenhaomin/work/myos/boot/loader /home/shenhaomin/work/myos/boot/loader.S -I /home/shenhaomin/work/myos/include/
-gcc-4.4 /home/shenhaomin/work/myos/kernel/main.c -o /home/shenhaomin/work/kernel -c -m32
-ld /home/shenhaomin/work/kernel -Ttext 0xc0001500 -e main -o /home/shenhaomin/work/kernel.bin -m elf_i386
+nasm -o build/mbr boot/mbr.S -I include/
+nasm -o build/loader boot/loader.S -I include/
+gcc-4.4 -o build/main.o -c -m32 -I lib/kernel/ kernel/main.c 
+nasm -f elf -o build/print.o lib/kernel/print.S
+ld -m elf_i386 -Ttext 0x00001500 -e main -o build/kernel.bin  build/main.o build/print.o
 //
-
+注意要在myos目录下
 加载到磁盘
-dd if=/home/shenhaomin/work/myos/boot/mbr of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=1 conv=notrunc
-dd if=/home/shenhaomin/work/myos/boot/loader of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=4 conv=notrunc seek=2
-dd if=/home/shenhaomin/work/kernel.bin of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=200 conv=notrunc seek=9
+dd if=build/mbr of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=1 conv=notrunc
+dd if=build/loader of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=4 conv=notrunc seek=2
+dd if=build/kernel.bin of=/home/shenhaomin/work/bochs/hd60M.img bs=512 count=200 conv=notrunc seek=9
 //
 
 启动虚拟机

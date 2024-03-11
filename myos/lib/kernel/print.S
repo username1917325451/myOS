@@ -3,6 +3,10 @@ RPL0  equ   0
 SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0
 
 [bits 32]                                                   ;采用32位编译
+
+section .data                                               ;数据段
+put_int_buffer dq 0                                         ;定义8字节缓冲区用于数字到字符的转换
+
 section .text                                               ;表明这是个代码段
 
                                                             ;--------------------------------------------
@@ -17,7 +21,7 @@ put_str:
    push ebx
    push ecx
    xor ecx, ecx		                                       ;准备用ecx存储参数,清空
-   mov ebx, [esp + 12]	                                    ;从栈中得到待打印的字符串地址 
+   mov ebx, [esp + 12]	                                    ;从栈中得到待打印的字符串地址 3*4=12
 .goon:
    mov cl, [ebx]                                            ;ebx是字符串的地址，对地址进行取地址操作，然后取出一字节的数据，就是取出了字符串的第一个字符
    cmp cl, 0		                                          ;如果处理到了字符串尾,跳到结束处返回
@@ -147,3 +151,65 @@ put_char:
     popad
     ret
 
+
+                                                            ;------------------------   put_int   -----------------------------
+                                                            ;将传入的16进制整数以字符串形式打印出来
+                                                            ;------------------------------------------------------------------- 
+global put_int
+put_int:
+   pushad
+   mov ebp, esp
+   mov eax, [ebp+4*9]		                                 ;call的返回地址占4字节+pushad的8个4字节，现在eax中就是要显示的32位数值
+   mov edx, eax                                             ;edx中现在是要显示的32位数值
+   mov edi, 7                                               ;指定在put_int_buffer中初始的偏移量，也就是把栈中第一个字节取出放入buffer最后一个位置，第二个字节放入buff倒数第二个位置
+   mov ecx, 8			                                       ;32位数字中,16进制数字的位数是8个
+   mov ebx, put_int_buffer                                  ;ebx现在存储的是buffer的起始地址
+
+                                                            ;将32位数字按照16进制的形式从低位到高位逐个处理,共处理8个16进制数字
+.16based_4bits:			                                    ;每4位二进制是16进制数字的1位,遍历每一位16进制数字
+   and edx, 0x0000000F		                                 ;解析16进制数字的每一位。and与操作后,edx只有低4位有效
+   cmp edx, 9			                                       ;数字0～9和a~f需要分别处理成对应的字符
+   jg .is_A2F 
+   add edx, '0'			                                    ;ascii码是8位大小。add求和操作后,edx低8位有效。
+   jmp .store
+.is_A2F:
+   sub edx, 10			                                       ;A~F 减去10 所得到的差,再加上字符A的ascii码,便是A~F对应的ascii码
+   add edx, 'A'
+
+                                                            ;将每一位数字转换成对应的字符后,按照类似“大端”的顺序存储到缓冲区put_int_buffer
+                                                            ;高位字符放在低地址,低位字符要放在高地址,这样和大端字节序类似,只不过咱们这里是字符序.
+.store:
+   mov [ebx+edi], dl		                                    ;此时dl中是数字对应的字符的ascii码
+   dec edi                                                  ;edi是表示在buffer中存储的偏移，现在向前移动
+   shr eax, 4                                               ;eax中是完整存储了这个32位数值，现在右移4位，处理下一个4位二进制表示的16进制数字
+   mov edx, eax                                             ;把eax中的值送入edx，让ebx去处理
+   loop .16based_4bits
+
+                                                            ;现在put_int_buffer中已全是字符,打印之前,
+                                                            ;把高位连续的字符去掉,比如把字符00000123变成123
+.ready_to_print:
+   inc edi			                                          ;此时edi退减为-1(0xffffffff),加1使其为0
+
+.skip_prefix_0:                                             ;跳过前缀的连续多个0
+   cmp edi,8			                                       ;若已经比较第9个字符了，表示待打印的字符串为全0 
+   je .full0 
+   mov cl, [put_int_buffer+edi]                             ;取出当前最高位的数字
+   inc edi                                                  ;偏移递增，指向下一位
+   cmp cl, '0'
+   je .skip_prefix_0                                        ;当前这位是0则跳过，继续skio_prefix_0判断
+   dec edi                                                  ;当前这位不是0，回退偏移量，意味着找到了第一个不是0的数字
+   jmp .put_each_num
+
+.full0:
+   mov cl,'0'			                                       ;输入的数字为全0时，则只打印0
+
+.put_each_num:
+   push ecx			                                          ;此时cl中为可打印的字符
+   call put_char
+   add esp, 4
+   inc edi			                                          ;使edi指向下一个字符
+   mov cl, [put_int_buffer+edi]	                           ;获取下一个字符到cl寄存器
+   cmp edi,8                                                ;当edi=8时，虽然不会去打印，但是实际上已经越界访问缓冲区了
+   jl .put_each_num
+   popad
+   ret

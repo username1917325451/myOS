@@ -73,7 +73,7 @@ rd_disk_m_16:
 
                                     ;第2步：在特定通道寄存器中放入要读取扇区的地址，将LBA地址存入0x1f3 ~ 0x1f6
                                     ;LBA地址7~0位写入端口0x1f3
-    mov dx,0x1f3                       
+    mov dx,0x1f3
     out dx,al                          
 
                                     ;LBA地址15~8位写入端口0x1f4

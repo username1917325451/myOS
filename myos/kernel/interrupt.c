@@ -14,7 +14,7 @@
 #define IDT_DESC_CNT 0x21	   //支持的中断描述符个数33
 
 #define EFLAGS_IF   0x00000200       // eflags寄存器中的if位为1
-#define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g" (EFLAG_VAR))
+#define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g" (EFLAG_VAR)) // 获取当前标志寄存器的值
 //pop到了EFLAG_VAR所在内存中，该约束自然用表示内存的字母，但是内联汇编中没有专门表示约束内存的字母，所以只能用g
 //g 代表可以是任意寄存器，内存或立即数
 
@@ -33,8 +33,8 @@ static struct gate_desc idt[IDT_DESC_CNT];   //中断门描述符（结构体）
 
 extern intr_handler intr_entry_table[IDT_DESC_CNT];	    //引入kernel.s中定义好的中断处理函数地址数组，intr_handler就是void* 表明是一般地址类型
 
-char* intr_name[IDT_DESC_CNT];		         //存储中断/异常的名字
-intr_handler idt_table[IDT_DESC_CNT];	     // 定义中断处理程序数组.在kernel.S中定义的intrXXentry只是中断处理程序的入口,最终调用的是ide_table中的处理程序
+char* intr_name[IDT_DESC_CNT];		        //存储中断/异常的名字
+intr_handler idt_table[IDT_DESC_CNT];	     //定义中断处理程序数组.在kernel.S中定义的intrXXentry只是中断处理程序的入口,最终调用的是ide_table中的处理程序
 
 /* 初始化可编程中断控制器8259A */
 static void pic_init(void) {
@@ -84,9 +84,34 @@ static void general_intr_handler(uint8_t vec_nr) {
    if (vec_nr == 0x27 || vec_nr == 0x2f) {	//伪中断向量，无需处理。详见书p337
       return;		
    }
-   put_str("int vector: 0x");
-   put_int(vec_nr);
-   put_char('\n');
+    /* 将光标置为0,从屏幕左上角清出一片打印异常信息的区域,方便阅读 */
+   set_cursor(0);
+   int cursor_pos = 0;
+   while(cursor_pos < 320){
+      put_char(' ');
+      cursor_pos++;
+   }
+   set_cursor(0);	      // 重置光标为屏幕左上角
+   put_str("!!!!!!!      excetion message begin  !!!!!!!!\n");
+   set_cursor(88);	   // 从第2行第8个字符开始打印
+   put_str(intr_name[vec_nr]);
+
+   if (vec_nr == 14) {	  // 若为Pagefault,将缺失的地址打印出来并悬停
+      int page_fault_vaddr = 0; 
+      asm ("movl %%cr2, %0" : "=r" (page_fault_vaddr));	  // cr2是存放造成page_fault的地址
+      put_str("\npage fault addr is ");put_int(page_fault_vaddr); 
+   }
+   put_str("\n!!!!!!!      excetion message end    !!!!!!!!\n");
+  // 能进入中断处理程序就表示已经处在关中断情况下,
+  // 不会出现调度进程的情况。故下面的死循环不会再被中断。
+   while(1);
+}
+
+/* 在中断处理程序数组第vector_no个元素中注册安装中断处理程序function */
+void register_handler(uint8_t vector_no, intr_handler function) {
+/* idt_table数组中的函数是在进入中断后根据中断向量号调用的,
+ * 见kernel/kernel.S的call [idt_table + %1*4] */
+   idt_table[vector_no] = function;
 }
 
 /* 完成一般中断处理函数注册及异常名称注册 */
@@ -158,13 +183,13 @@ enum intr_status intr_enable() {
 }
 
 /* 关中断,并且返回关中断前的状态 */
-enum intr_status intr_disable() {     
+enum intr_status intr_disable() {
    enum intr_status old_status;
    if (INTR_ON == intr_get_status()) {
       old_status = INTR_ON;
       asm volatile("cli" : : : "memory"); // 关中断,cli指令将IF位置0
-                                          //cli指令不会直接影响内存。然而，从一个更大的上下文来看，禁用中断可能会影响系统状态，
-                                          //这个状态可能会被存储在内存中。所以改变位填 "memory" 是为了安全起见，确保编译器在生成代码时考虑到这一点。
+                                          // cli指令不会直接影响内存。然而，从一个更大的上下文来看，禁用中断可能会影响系统状态，
+                                          // 这个状态可能会被存储在内存中。所以改变位填 "memory" 是为了安全起见，确保之前的内存操作已经完成。
       return old_status;
    } else {
       old_status = INTR_OFF;

@@ -1,6 +1,6 @@
 %include "boot.inc"
 section loader vstart=LOADER_BASE_ADDR
-                                             
+
 GDT_BASE:                                               ;构建gdt及其内部的描述符
     dd 0x00000000 
 	dd 0x00000000
@@ -22,13 +22,13 @@ VIDEO_DESC:
     times 60 dq 0					                    ; 此处预留60个描述符的空间
     SELECTOR_CODE equ (0x0001<<3) + TI_GDT + RPL0       ; 相当于(CODE_DESC - GDT_BASE)/8 + TI_GDT + RPL0
     SELECTOR_DATA equ (0x0002<<3) + TI_GDT + RPL0	    ; 同上
-    SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0	    ; 同上 
+    SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0	    ; 同上
 
 
 
 total_mem_bytes dd 0				                    ; total_mem_bytes用于保存内存容量,以字节为单位,此位置比较好记。
                                                         ; 当前偏移loader.bin文件头0x200字节,loader.bin的加载地址是0x900,
-                                                        ; 故total_mem_bytes内存中的地址是0xb00.将来在内核中咱们会引用此地址	
+                                                        ; 故total_mem_bytes内存中的地址是0xb00.
 
 gdt_ptr dw GDT_LIMIT                                    ;定义加载进入GDTR的数据，前2字节是gdt界限，后4字节是gdt起始地址，
 	    dd  GDT_BASE
@@ -164,9 +164,9 @@ kernel_init:
     call mem_cpy				                        ; 调用mem_cpy完成段复制
     add esp,12				                            ; 清理栈中压入的三个参数
 .PTNULL:
-   add ebx, edx				                            ; edx为program header大小,即e_phentsize,在此ebx指向下一个program header 
-   loop .each_segment
-   ret
+    add ebx, edx				                            ; edx为program header大小,即e_phentsize,在此ebx指向下一个program header 
+    loop .each_segment
+    ret
 
 
                                                         ;----------  逐字节拷贝 mem_cpy(dst,src,size) ------------

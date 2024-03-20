@@ -34,7 +34,7 @@ section .data                               ;这个段就是存的此中断处�
 
 section .text
 global intr_exit
-intr_exit:	     
+intr_exit:
                                             ; 以下是恢复上下文环境
     add esp, 4			                    ; 跳过中断号
     popad

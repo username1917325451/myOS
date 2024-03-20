@@ -3,7 +3,7 @@ LOADER_BASE_ADDR equ 0x900
 LOADER_START_SECTOR equ 0x2
 PAGE_DIR_TABLE_POS equ 0x100000                     ;页目录表在内存中的起始位置——从1M开始的位置
 
-LOADER_STACK_TOP equ LOADER_BASE_ADDR               ;这一条之前是在loader.S中定义，现在搬过来了
+LOADER_STACK_TOP equ LOADER_BASE_ADDR
 
 KERNEL_BIN_BASE_ADDR equ 0x70000                    ;定义内核在内存中的缓冲区，也就是将编译好的内核文件暂时存储在内存中的位置
 KERNEL_START_SECTOR equ 0x9                         ;定义内核在磁盘的起始扇区

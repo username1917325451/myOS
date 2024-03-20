@@ -39,7 +39,7 @@ put_str:
 
                                                             ;------------------------   put_char   -----------------------------
                                                             ;功能描述:把栈中的1个字符写入光标所在处
-                                                            ;-------------------------------------------------------------------   
+                                                            ;-------------------------------------------------------------------
 global put_char                                             ;将put_char导出为全局符号，这样其他文件也可以使用
 put_char:
     pushad	                                                ;备份32位寄存器环境
@@ -60,7 +60,7 @@ put_char:
     mov dx, 0x03d4
     mov al, 0x0f
     out dx, al
-    mov dx, 0x03d5 
+    mov dx, 0x03d5
     in al, dx                                                  
     mov bx, ax	                                             ;现在bx中存的是光标的位置
                                                             ;下面这行是在栈中获取待打印的字符
@@ -211,5 +211,27 @@ put_int:
    mov cl, [put_int_buffer+edi]	                           ;获取下一个字符到cl寄存器
    cmp edi,8                                                ;当edi=8时，虽然不会去打印，但是实际上已经越界访问缓冲区了
    jl .put_each_num
+   popad
+   ret
+
+global set_cursor
+set_cursor:
+   pushad
+   mov bx, [esp+36]                             ;将需要设定的光标值放到bx中
+															;;;;;;; 1 先设置高8位 ;;;;;;;;
+   mov dx, 0x03d4			  								;索引寄存器
+   mov al, 0x0e				  								;用于提供光标位置的高8位
+   out dx, al
+   mov dx, 0x03d5			  								;通过读写数据端口0x3d5来获得或设置光标位置 
+   mov al, bh
+   out dx, al
+
+															;;;;;;; 2 再设置低8位 ;;;;;;;;;
+   mov dx, 0x03d4
+   mov al, 0x0f
+   out dx, al
+   mov dx, 0x03d5 
+   mov al, bl
+   out dx, al
    popad
    ret

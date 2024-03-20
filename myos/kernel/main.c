@@ -1,34 +1,56 @@
 #include "print.h"
 #include "init.h"
-#include "debug.h"
-#include "string.h"
+#include "thread.h"
+#include "interrupt.h"
+
+void k_thread_a(void*);
+void k_thread_b(void*);
 int main(void) {
-   put_str("I am kernel\n");
-   // init_all();
-   char* a = "aaaaaaa";
-   char* b = "bbbbbbb";
-   char* ab = "aaab";
-   put_str("length of a: ");
-   put_int(strlen(a));
-   put_char('\n');
-   put_str("cmp a and b: ");
-   put_int(strcmp(a, b));
-   put_char('\n');
-   put_str("strcat a and b :");
-   put_str(strcat(a, b));
-   put_char('\n');
-   put_str("length of a: ");
-   put_int(strlen(a));
-   put_char('\n');
-   put_str("the count of 'a' in ab: ");
-   put_int(strchrs(ab, 'a'));
-   put_char('\n');
-   put_str("strcpy ab to a, then print a: ");
-   put_str(strcpy(a, ab));
-   put_char('\n');
-   put_str("init a: ");
-   memset(a, 0, strlen(a));
-   put_str(a);
-   put_char('\n');
-   return 0;
+    put_str("I am kernel\n");
+    init_all();
+    int i = 999999;
+    thread_start("k_thread_a", 31, k_thread_a, "argA ");
+    thread_start("k_thread_b", 31, k_thread_b, "argB ");
+
+    intr_enable();	// 打开中断,使时钟中断起作用
+    while(1)
+    {
+        while(i--);
+        i=999999;
+        intr_disable();
+        put_str("main ");
+        intr_enable();
+    }
+    return 0;
 }
+
+/* 在线程中运行的函数 */
+void k_thread_a(void* arg) {     
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    int i=9999999;
+    char* tmp = arg;
+    while(1)
+    {
+        while(i--);
+        i=999999;
+        intr_disable();
+        put_str(tmp);  
+        intr_enable();      
+    }
+}
+
+/* 在线程中运行的函数 */
+void k_thread_b(void* arg) {     
+/* 用void*来通用表示参数,被调用的函数知道自己需要什么类型的参数,自己转换再用 */
+    int i=9999999;
+    char* tmp = arg;
+    while(1)
+    {
+        while(i--);
+        i=999999;
+        intr_disable();
+        put_str(tmp);
+        intr_enable();
+    }
+}
+

@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "debug.h": "c",
+        "bitmap.h": "c",
+        "thread.h": "c",
+        "string.h": "c"
+    }
+}

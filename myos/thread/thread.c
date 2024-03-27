@@ -3,7 +3,7 @@
 #include "string.h"
 #include "global.h"
 #include "memory.h"
-
+#include "process.h"
 #include "debug.h"
 #include "interrupt.h"
 #include "print.h"
@@ -130,6 +130,7 @@ void schedule() {
    // 找到thread_tag所在结构体的起始地址
    struct task_struct* next = elem2entry(struct task_struct, general_tag, thread_tag);
    next->status = TASK_RUNNING;
+   process_activate(next); //激活任务页表
    switch_to(cur, next);
 }
 

@@ -214,13 +214,13 @@ setup_page:                                             ;-----------------------
                                                         
     mov ecx, 256				                        ; -----------------初始化第一个页表，因为我们的操作系统不会超过1M，所以只用初始化256项
     mov esi, 0                                          ; esi来做寻址页表项的偏移量
-    xor edx, edx                                        ;将edx置为0，现在edx指向0地址
+    xor edx, edx                                        ; 将edx置为0，现在edx指向0地址
     mov edx, PG_US_U | PG_RW_W | PG_P	                ; 属性为7,US=1,RW=1,P=1
 .create_pte:				                            ; 创建Page Table Entry
     mov [ebx+esi*4],edx			                        ; 此时的ebx已经在上面通过eax赋值为0x101000,也就是第一个页表的地址 
     add edx,4096                                        ; edx指向下一个4kb空间，且已经设定好了属性，故edx中是一个完整指向下一个4kb物理空间的页表表项
     inc esi                                             ; 寻址页表项的偏移量+1
-    loop .create_pte                                    ;循环设定第一个页表的256项
+    loop .create_pte                                    ; 循环设定第一个页表的256项
 
                                                         ; -------------------初始化页目录表769号-1022号项，769号项指向第二个页表的地址（此页表紧挨着上面的第一个页表），770号指向第三个，以此类推
     mov eax, PAGE_DIR_TABLE_POS                         ; eax存页目录表的起始位置

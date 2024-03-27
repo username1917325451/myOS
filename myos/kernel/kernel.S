@@ -12,15 +12,15 @@ intr_entry_table:                           ;编译器会将之后所有同属�
 section .text                               ;中断处理函数的代码段
 intr%1entry:		                        ;每个中断处理程序都要压入中断向量号,所以一个中断类型一个中断处理程序，自己知道自己的中断向量号是多少,此标号来表示中断处理程序的入口
     %2                                      ;这一步是根据宏传入参数的变化而变化的
-                                            
-    push ds                                 ; 以下是保存上下文环境
+                                            ;以下是保存上下文环境
+    push ds                                 ;保存段寄存器
     push es
     push fs
     push gs
-    pushad
+    pushad                                  ;依次将EAX、ECX、EDX、EBX、ESP、EBP、ESI 和 EDI压入栈
 
-                                            ; 如果是从片上进入的中断,除了往从片上发送EOI外,还要往主片上发送EOI 
-    mov al,0x20                             ; 中断结束命令EOI
+                                            ;如果是从片上进入的中断,除了往从片上发送EOI外,还要往主片上发送EOI 
+    mov al,0x20                             ;中断结束命令EOI
     out 0xa0,al                             ;向主片发送OCW2,其中EOI位为1，告知结束中断，详见书p317
     out 0x20,al                             ;向从片发送OCW2,其中EOI位为1，告知结束中断
 

@@ -2,6 +2,7 @@
 #define __THREAD_THREAD_H
 #include "stdint.h"
 #include "list.h"
+#include "memory.h"
 
                                 //定义一种叫thread_fun的函数类型，该类型返回值是空，参数是一个地址(这个地址用来指向自己的参数)。
                                 //这样定义，这个类型就能够具有很大的通用性，很多函数都是这个类型
@@ -25,6 +26,7 @@ enum task_status {
                                 ********************************************/
 struct intr_stack {
     uint32_t vec_no;	        // kernel.S 宏VECTOR中push %1压入的中断号
+   // pushad/popad
     uint32_t edi;
     uint32_t esi;
     uint32_t ebp;
@@ -33,6 +35,7 @@ struct intr_stack {
     uint32_t edx;
     uint32_t ecx;
     uint32_t eax;
+    
     uint32_t gs;
     uint32_t fs;
     uint32_t es;
@@ -72,19 +75,23 @@ struct thread_stack {
 
                                     /* 进程或线程的pcb,程序控制块, 此结构体用于存储线程的管理信息*/
 struct task_struct {
-   uint32_t* self_kstack;	        // 用于存储线程的栈顶位置，栈顶放着线程要用到的运行信息
+   uint32_t* self_kstack;	         // 用于存储线程的栈顶位置，栈顶放着线程要用到的运行信息
    enum task_status status;
-   uint8_t priority;		        // 线程优先级
+   uint8_t priority;		            // 线程优先级
    char name[16];                   // 用于存储自己的线程的名字
 
-   uint8_t ticks;	                //线程允许上处理器运行还剩下的滴答值，因为priority不能改变，所以要在其之外另行定义一个值来倒计时
+   uint8_t ticks;	                  //线程允许上处理器运行还剩下的滴答值，因为priority不能改变，所以要在其之外另行定义一个值来倒计时
    uint32_t elapsed_ticks;          //此任务自上cpu运行后至今占用了多少cpu嘀嗒数, 也就是此任务执行了多久*/
-   struct list_elem general_tag;	//general_tag的作用是用于线程在一般的队列(如就绪队列或者等待队列)中的结点
+   struct list_elem general_tag;	   //general_tag的作用是用于线程在一般的队列(如就绪队列或者等待队列)中的结点
    struct list_elem all_list_tag;   //all_list_tag的作用是用于线程队列thread_all_list（这个队列用于管理所有线程）中的结点
-   uint32_t* pgdir;                 // 进程自己页表的虚拟地址
 
-   uint32_t stack_magic;	        //如果线程的栈无限生长，总会覆盖地pcb的信息，那么需要定义个边界数来检测是否栈已经到了PCB的边界
+   uint32_t* pgdir;                 // 进程自己页表的虚拟地址
+   struct virtual_addr userprog_vaddr;   // 用户进程的虚拟地址
+
+   uint32_t stack_magic;	         //如果线程的栈无限生长，总会覆盖地pcb的信息，那么需要定义个边界数来检测是否栈已经到了PCB的边界
 };
+extern struct list thread_ready_list;
+extern struct list thread_all_list;
 
 void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);

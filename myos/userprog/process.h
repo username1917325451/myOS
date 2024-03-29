@@ -12,12 +12,10 @@ void start_process(void* filename_);
 void intr_init(void* func);
 void page_dir_activate(struct task_struct* p_thread);
 void process_activate(struct task_struct* p_thread);
+void process_execute(void* func, char* name);
 
 struct list thread_ready_list; //线程就绪队列
 struct list thread_all_list;   //线程全部队列
-
-void process_execute(void* func, char* name);
-
 
 #endif
 

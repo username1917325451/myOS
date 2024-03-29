@@ -3,6 +3,7 @@
 %define ZERO push 0		                    ; 有些中断进入前CPU不会压入错误码，对于这类中断，我们为了与前一类中断统一管理，就自己压入32位的0
 
 extern idt_table		                    ;idt_table是C中注册的中断处理程序数组
+extern put_char
 
 section .data
 global intr_entry_table
@@ -26,7 +27,10 @@ intr%1entry:		                        ;每个中断处理程序都要压入中�
 
     push %1			                        ; 不管idt_table中的目标程序是否需要参数,都一律压入中断向量号,调试时很方便
     call [idt_table + %1*4]                 ; 调用idt_table中的C版本中断处理函数
-    jmp intr_exit
+
+    jmp intr_exit           ; 如果call执行的是时钟中断处理函数，调用了schedule，且每次切换到的线程里都有死循环，是否永远都不会执行到这一句??
+                            ; false, 当线程被切换走的前一刻执行的是switch, 被切回的时候会从switch返回、从schedule返回, 再从中断处理函数返回
+                            ; 此时就会执行到这一句
 
 section .data                               ;这个段就是存的此中断处理函数的地址
     dd    intr%1entry	                    ; 存储各个中断入口程序的地址，形成intr_entry_table数组,定义的地址是4字节，32位

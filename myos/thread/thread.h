@@ -25,29 +25,29 @@ enum task_status {
                                  * 此栈在线程自己的内核栈中位置固定,所在页的最顶端
                                 ********************************************/
 struct intr_stack {
-    uint32_t vec_no;	        // kernel.S 宏VECTOR中push %1压入的中断号
+   uint32_t vec_no;	        // kernel.S 宏VECTOR中push %1压入的中断号
    // pushad/popad
-    uint32_t edi;
-    uint32_t esi;
-    uint32_t ebp;
-    uint32_t esp_dummy;	        // 虽然pushad把esp也压入,但esp是不断变化的,所以会被popad忽略
-    uint32_t ebx;
-    uint32_t edx;
-    uint32_t ecx;
-    uint32_t eax;
-    
-    uint32_t gs;
-    uint32_t fs;
-    uint32_t es;
-    uint32_t ds;
+   uint32_t edi;
+   uint32_t esi;
+   uint32_t ebp;
+   uint32_t esp_dummy;	        // 虽然pushad把esp也压入,但esp是不断变化的,所以会被popad忽略
+   uint32_t ebx;
+   uint32_t edx;
+   uint32_t ecx;
+   uint32_t eax;
+   // 段寄存器
+   uint32_t gs;
+   uint32_t fs;
+   uint32_t es;
+   uint32_t ds;
 
-                                /* 以下由cpu从低特权级进入高特权级时压入 */
-    uint32_t err_code;		    // err_code会被压入在eip之后
-    void (*eip) (void);
-    uint32_t cs;
-    uint32_t eflags;
-    void* esp;
-    uint32_t ss;
+                              /* 以下由cpu从低特权级进入高特权级时压入 */
+   uint32_t err_code;		    // err_code会被压入在eip之后
+   void (*eip) (void);
+   uint32_t cs;
+   uint32_t eflags;
+   void* esp;
+   uint32_t ss;
 };
 
                                 /***********  线程栈thread_stack  ***********

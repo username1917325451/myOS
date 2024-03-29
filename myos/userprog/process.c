@@ -42,7 +42,8 @@ void start_process(void* filename_) {
    // put_str("_____process_start_______\n");
    void* function = filename_;
    struct task_struct* cur = running_thread();
-   // cur->self_kstack += sizeof(struct thread_stack); //当我们进入到这里的时候，cur->self_kstack指向thread_stack的起始地址，跳过这里，才能设置intr_stack
+   // cur->self_kstack += sizeof(struct thread_stack); 
+   //当我们进入到这里的时候，cur->self_kstack指向thread_stack的起始地址，跳过这里，指向intr_stack
    cur->self_kstack = (uint32_t*)((int)cur->self_kstack + sizeof(struct thread_stack));     // ??
    // 初始化中断栈信息
    struct intr_stack* proc_stack = (struct intr_stack*)cur->self_kstack;
@@ -54,20 +55,34 @@ void start_process(void* filename_) {
    proc_stack->cs = SELECTOR_U_CODE;
    proc_stack->eflags = (EFLAGS_IOPL_0 | EFLAGS_MBS | EFLAGS_IF_1);     //设置用户态下的eflages的相关字段
    // 初始化中断栈中的栈顶位置，为虚拟地址(0xc0000000 - 0x1000)在用户内存池中申请一个物理页，然后将虚拟地址+4096置为栈顶
+   // 启动多个用户进程时会导致给同一个虚拟地址多次申请物理页 ?? true
    proc_stack->esp = (void*)((uint32_t)get_a_page(PF_USER, USER_STACK3_VADDR) + PG_SIZE);
    proc_stack->ss = SELECTOR_U_DATA;
-   // intr_exit中把intr_stack中的值设置到各寄存器  通过iret去真正进入进程要执行的函数(eip指向的函数)
+   /* 
+      要从高特权级切换到低特权级, 只能是从中断或者调用门返回的情况下, 考虑模拟中断返回的情况
+      从中断返回肯定要用到 iretd 指令，iretd 指令会用到栈中的数据作为返回地址，还会加载栈中 eflags
+      的值到 eflags 寄存器，如果栈中 cs.rpl 若为更低的特权级，处理器的特权级检查通过后，会将栈中 cs 载入
+      到 CS 寄存器，栈中 ss 载入 SS 寄存器，随后处理器进入低特权级。因此我们必然要在栈中提前准备好数
+      据供 iretd 指令使用。您看，既然已经涉及到栈操作了，不如进行得更彻底一些，咱们将进程的上下文都
+      存到栈中，通过一系列的 pop 操作把用户进程的数据装载到寄存器，最后再通过 iretd 指令退出中断
+      即直接调用intr_exit即可
+   */
+   // intr_exit中把intr_stack中的值设置到各寄存器, iretd后真正进入进程要执行的函数(eip指向的函数)
+   // 用jmp不用call 否则会造成缺页异常 ??
    asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (proc_stack) : "memory");
+   /*
+      当进程第二次被切换到时特权级怎么变回来 ??
+      当进程运行的好好的，发生中断后（如时钟中断）, CPU会自动从TSS中取出ss0与esp0,
+      然后将进程在用户态运行的信息保存在取出的ss0:esp0指向的内核栈中（相当于内核栈中存着用户栈的栈顶位置）。
+      假设此时发生切换，内核栈的栈顶位置已经保存在task_struct结构体中与TSS中。
+      当下次被切换上CPU时，从task_struct中取出内核栈的栈顶位置，然后从中弹出用户栈的栈顶位置与其他执行环境，
+      接着执行上一次被切走时的中断处理函数（也就是还剩下jmp intr_exit）
+      最后iret返回（时钟中断的）回到用户态继续执行。
+   */
 }
 
 /* 激活页表 */
 void page_dir_activate(struct task_struct* p_thread) {
-/********************************************************
- * 执行此函数时,当前任务可能是线程。
- * 之所以对线程也要重新安装页表, 原因是上一次被调度的可能是进程,
- * 否则不恢复页表的话,线程就会使用进程的页表了。
- ********************************************************/
-
 /* 若为内核线程,需要重新填充页表为0x100000 */
    uint32_t pagedir_phy_addr = 0x100000;  // 默认为内核的页目录物理地址,也就是内核线程所用的页目录表
    if (p_thread->pgdir != NULL)	{    //如果不为空，说明要调度的是个进程，那么就要执行加载页表，所以先得到进程页目录表的物理地址
@@ -78,16 +93,19 @@ void page_dir_activate(struct task_struct* p_thread) {
 
 //用于加载进程自己的页目录表，同时更新进程自己的0特权级esp0到TSS中
 void process_activate(struct task_struct* p_thread) {
-    ASSERT(p_thread != NULL);
-   /* 激活该进程或线程的页表 */
-    page_dir_activate(p_thread);
-   /* 内核线程特权级本身就是0,处理器进入中断时并不会从tss中获取0特权级栈地址,故不需要更新esp0 */
-    if (p_thread->pgdir)
-        update_tss_esp(p_thread);   /* 更新该进程的esp0,用于此进程被中断时保留上下文 */
+   ASSERT(p_thread != NULL);
+/* 激活该进程或线程的页表 */
+   page_dir_activate(p_thread);
+
+   if (p_thread->pgdir)
+      update_tss_esp(p_thread);   /* 更新该进程的esp0,用于此进程被中断时保留上下文 */
+   else{
+      /* 内核线程特权级本身就是0,处理器进入中断时并不会从tss中获取0特权级栈地址,故不需要更新esp0 */
+   }
 }
 	
 //用于创建进程，参数是进程要执行的函数与他的名字
-void process_execute(void* filename, char* name) { 
+void process_execute(void* filename, char* name) {
     /* pcb内核的数据结构,由内核来维护进程信息,因此要在内核内存池中申请 */
     struct task_struct* thread = get_kernel_pages(1);
     init_thread(thread, name, default_prio);

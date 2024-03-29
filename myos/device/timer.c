@@ -43,6 +43,7 @@ static void intr_timer_handler(void) {
 
    if (cur_thread->ticks == 0) {	  // 若进程时间片用完就开始调度新的进程上cpu
       schedule();
+      // put_str("\n!!!!!!!!!!!!!!!\n");
    }
    else {				  // 将当前进程的时间片-1
       cur_thread->ticks--;

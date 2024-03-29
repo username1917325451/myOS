@@ -67,8 +67,8 @@ void start_process(void* filename_) {
       存到栈中，通过一系列的 pop 操作把用户进程的数据装载到寄存器，最后再通过 iretd 指令退出中断
       即直接调用intr_exit即可
    */
-   // intr_exit中把intr_stack中的值设置到各寄存器, iretd后真正进入进程要执行的函数(eip指向的函数)
-   // 用jmp不用call 否则会造成缺页异常 ??
+   // 把 jmp 改成 call 会导致缺页异常??
+   // :call指令会多压入下一条命令的地址到栈中, esp指向栈顶, 需要让esp跳过这个地址才能正常运行
    asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (proc_stack) : "memory");
    /*
       当进程第二次被切换到时特权级怎么变回来 ??

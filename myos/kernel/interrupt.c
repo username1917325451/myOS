@@ -11,7 +11,7 @@
 #define PIC_S_DATA 0xa1	       // 从片的数据端口是0xa1
 
 
-#define IDT_DESC_CNT 0x30	   //支持的中断描述符个数33
+#define IDT_DESC_CNT 0x81	   //支持的中断描述符个数33
 
 #define EFLAGS_IF   0x00000200       // eflags寄存器中的if位为1
 #define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g" (EFLAG_VAR)) // 获取当前标志寄存器的值
@@ -32,6 +32,7 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 static struct gate_desc idt[IDT_DESC_CNT];   //中断门描述符（结构体）数组，名字叫idt
 
 extern intr_handler intr_entry_table[IDT_DESC_CNT];	    //引入kernel.s中定义好的中断处理函数地址数组，intr_handler就是void* 表明是一般地址类型
+extern uint32_t syscall_handler(void);    //定义的汇编中断处理程序代码
 
 char* intr_name[IDT_DESC_CNT];		        //存储中断/异常的名字
 intr_handler idt_table[IDT_DESC_CNT];	     //定义中断处理程序数组.在kernel.S中定义的intrXXentry只是中断处理程序的入口,最终调用的是ide_table中的处理程序
@@ -79,10 +80,12 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 //此函数用来循环调用make_idt_desc函数来完成中断门描述符与中断处理函数映射关系的建立,传入三个参数：中断描述符表某个中段描述符（一个结构体）的地址
 //属性字段，中断处理函数的地址
 static void idt_desc_init(void) {
-   int i;
+   int i, lastindex = IDT_DESC_CNT - 1;
    for (i = 0; i < IDT_DESC_CNT; i++) {
       make_idt_desc(&idt[i], IDT_DESC_ATTR_DPL0, intr_entry_table[i]); 
    }
+   //单独处理系统调用,系统调用对应的中断门dpl为3,使得可以在用户级中访问该段,中断处理程序为汇编的syscall_handler
+   make_idt_desc(&idt[lastindex], IDT_DESC_ATTR_DPL3, syscall_handler);
    put_str("   idt_desc_init done\n");
 }
 

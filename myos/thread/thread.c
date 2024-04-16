@@ -32,6 +32,16 @@ static void kernel_thread(thread_func* function, void* func_arg) {
    function(func_arg); 
 }
 
+/* 分配pid */
+pid_t allocate_pid(void) {
+   static pid_t next_pid = 0;
+   // lock_acquire(&pid_lock);
+   // next_pid++;
+   // lock_release(&pid_lock);
+   return ++next_pid;
+   // return 2;
+}
+
 /*用于根据传入的线程的pcb地址、要运行的函数地址、函数的参数地址来初始化线程栈中的运行信息，核心就是填入要运行的函数地址与参数 */
 void thread_create(struct task_struct* pthread, thread_func function, void* func_arg) {
    /* 先预留中断使用栈的空间,可见thread.h中定义的结构 */
@@ -56,11 +66,12 @@ void thread_create(struct task_struct* pthread, thread_func function, void* func
 /* 初始化线程基本信息 , pcb中存储的是线程的管理信息，此函数用于根据传入的pcb的地址，线程的名字等来初始化线程的管理信息*/
 void init_thread(struct task_struct* pthread, char* name, int prio) {
    memset(pthread, 0, sizeof(*pthread));                                //把pcb初始化为0
+   pthread->pid = allocate_pid();
    strcpy(pthread->name, name);                                         //将传入的线程的名字填入线程的pcb中
 
    if(pthread == main_thread){
       pthread->status = TASK_RUNNING;     //由于把main函数也封装成一个线程,并且它一直是运行的,故将其直接设为TASK_RUNNING */  
-   } 
+   }
    else{
       pthread->status = TASK_READY;
    }
@@ -145,6 +156,7 @@ void thread_block(enum task_status stat) {
 /* 待当前线程被解除阻塞后才继续运行下面的intr_set_status */
    intr_set_status(old_status);
 }
+
 /* 将线程pthread解除阻塞 */
 void thread_unblock(struct task_struct* pthread) {
    enum intr_status old_status = intr_disable();      //涉及队就绪队列的修改，此时绝对不能被切换走

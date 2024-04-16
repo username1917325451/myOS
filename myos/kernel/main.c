@@ -4,30 +4,45 @@
 #include "interrupt.h"
 #include "console.h"
 #include "process.h"
+#include "syscallInit.h"
+#include "syscall.h"
+#include "stdio.h"
+#include "memory.h"
+#include "debug.h"
 
 void k_thread_a(void*);
 void k_thread_b(void*);
 void u_prog_a(void);
 void u_prog_b(void);
-int test_var_a = 0, test_var_b = 0;
 
 int main(void) {
    put_str("I am kernel\n");
    init_all();
 
-   thread_start("k_thread_a", 31, k_thread_a, "argA ");
-   thread_start("k_thread_b", 31, k_thread_b, "argB ");
+   void *p = get_a_page(PF_KERNEL, 0x8048000);
+   int *a = p;
+   *a = 3;
+
    process_execute(u_prog_a, "user_prog_a");
    process_execute(u_prog_b, "user_prog_b");
 
    intr_enable();
+   console_put_str(" main_pid:0x");
+   console_put_int(sys_getpid());
+   console_put_char('\n');
+   thread_start("k_thread_a", 31, k_thread_a, "argA ");
+   thread_start("k_thread_b", 31, k_thread_b, "argB ");
+
    while(1){
-      int i=0;
-      while(i<5000000){
-         i++;
+      int i = 0;
+      while(i < 10000000){
+         if(i % 500000 == 0){
+            console_put_str("the value for main is a : ");
+            console_put_int(*a);
+            console_put_str("\n");
+         }
+         i ++;
       }
-      console_put_str(" main:0x");
-      console_put_int(test_var_a);
    }
    return 0;
 }
@@ -35,56 +50,63 @@ int main(void) {
 /* 在线程中运行的函数 */
 void k_thread_a(void* arg) {     
    char* para = arg;
-   while(1) {
-      int i=0;
-      while(i<5000000){
-         i++;
-      }
-      console_put_str(" v_a:0x");
-      console_put_int(test_var_a);
-   }
+   console_put_str(" I am thread_a, my pid:0x");
+   console_put_int(sys_getpid());
+   console_put_char('\n');
+   while(1);
 }
 
 /* 在线程中运行的函数 */
 void k_thread_b(void* arg) {     
    char* para = arg;
-   while(1) {
-      int i=0;
-      while(i<5000000){
-         i++;
-      }
-      console_put_str(" v_b:0x");
-      console_put_int(test_var_b);
-   }
+   console_put_str(" I am thread_b, my pid:0x");
+   console_put_int(sys_getpid());
+   console_put_char('\n');
+   while(1);
 }
 
 /* 测试用户进程 */
 void u_prog_a(void) {
-   while(1) {
-      int i=0;
-      while(i<5000000){
-         i++;
+   char* name = "prog_a";
+   printf(" I am %s, my pid:%d%c", name, getpid(),'\n');
+   void *p = 0x8048000;
+   // void *p = get_user_pages(1);
+   int *a = p;
+   *a = 1;
+   // printf("the vaddr for a is : %x\n", p);
+   // put_str("prog_a use putstr\n");
+   // console_put_str("prog_a use putstr\n");
+   while(1){
+      int i = 0;
+      while(i < 10000000){
+         if(i % 500000 == 0){
+            printf("the value for a is : %d\n", *a);
+         }
+         i ++;
       }
-      // 使用打印函数会造成GP异常
-      // intr_disable();
-      // console_put_str("\nu_prog_a\n");
-      // intr_enable();
-      test_var_a++;
    }
+   while(1);
 }
 
 /* 测试用户进程 */
 void u_prog_b(void) {
-   while(1) {
-      int i=0;
-      while(i<5000000){
-         i++;
+   char* name = "prog_b";
+   printf(" I am %s, my pid:%d%c", name, getpid(), '\n');
+   // void *p = get_user_pages(1);
+   void *p = 0x8048000;
+   int *a = p;
+   *a = 2;
+   // printf("the vaddr for b is : %x\n", p);
+   // put_str("prog_a use putstr\n");
+   // console_put_str("prog_a use putstr\n");
+   while(1){
+      int i = 0;
+      while(i < 10000000){
+         if(i % 500000 == 0){
+            printf("the value for b is : %d\n", *a);
+         }
+         i ++;
       }
-      // intr_disable();
-      // console_put_str("\nu_prog_b\n");
-      // intr_enable();
-         
-      test_var_b++;
    }
+   while(1);
 }
-

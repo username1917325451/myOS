@@ -200,7 +200,7 @@ setup_page:                                             ;-----------------------
     loop .clear_page_dir
 
                                                         ; ----------------初始化页目录表，让0号项与768号指向同一个页表，该页表管理从0开始4M的空间
-.create_pde:				                            ;一个页目录表项可表示4MB内存,这样0xc03fffff以下的地址和0x003fffff以下的地址都指向相同的页表，这是为将地址映射为内核地址做准备
+.create_pde:				                            ; 一个页目录表项可表示4MB内存,这样0xc03fffff以下的地址和0x003fffff以下的地址都指向相同的页表，这是为将地址映射为内核地址做准备
     mov eax, PAGE_DIR_TABLE_POS                         ; eax中存着页目录表的位置
     add eax, 0x1000 			                        ; 在页目录表位置的基础上+4K（页目录表的大小），现在eax中第一个页表的起始位置
     mov ebx, eax				                        ; 此处为ebx赋值，现在ebx存着第一个页表的起始位置
@@ -217,7 +217,7 @@ setup_page:                                             ;-----------------------
     xor edx, edx                                        ; 将edx置为0，现在edx指向0地址
     mov edx, PG_US_U | PG_RW_W | PG_P	                ; 属性为7,US=1,RW=1,P=1
 .create_pte:				                            ; 创建Page Table Entry
-    mov [ebx+esi*4],edx			                        ; 此时的ebx已经在上面通过eax赋值为0x101000,也就是第一个页表的地址 
+    mov [ebx+esi*4],edx			                        ; 此时的ebx已经在上面通过eax赋值为0x101000,也就是第一个页表的地址
     add edx,4096                                        ; edx指向下一个4kb空间，且已经设定好了属性，故edx中是一个完整指向下一个4kb物理空间的页表表项
     inc esi                                             ; 寻址页表项的偏移量+1
     loop .create_pte                                    ; 循环设定第一个页表的256项

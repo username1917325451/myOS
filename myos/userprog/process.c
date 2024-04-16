@@ -16,6 +16,7 @@ extern void intr_exit(void);
 //用于初始化进程pcb中的用于管理自己虚拟地址空间的虚拟内存池结构体
 void create_user_vaddr_bitmap(struct task_struct* user_prog) {
    user_prog->userprog_vaddr.vaddr_start = USER_VADDR_START;
+   // 在bitmap中需要占用的page数量
    uint32_t bitmap_pg_cnt = DIV_ROUND_UP((0xc0000000 - USER_VADDR_START) / PG_SIZE / 8 , PG_SIZE);      //计算出管理用于进程那么大的虚拟地址的
                                                                                                         //位图需要多少页的空间来存储（向上取整结果）
    user_prog->userprog_vaddr.vaddr_bitmap.bits = get_kernel_pages(bitmap_pg_cnt);                       //申请位图空间
@@ -30,7 +31,8 @@ uint32_t* create_page_dir(void) {
         console_put_str("create_page_dir: get_kernel_page failed!");
         return NULL;
    }
-   //将内核页目录表的768号项到1022号项复制过来  0xfffff000 -> 内核页目录表的起始地址
+   // 将内核页目录表的768号项到1022号项复制过来  0xfffff000 -> 内核页目录表的起始地址
+   // 相当于访问3GB开始的虚拟空间
    memcpy((uint32_t*)((uint32_t)page_dir_vaddr + 768 * 4), (uint32_t*)(0xfffff000 + 768 * 4), 255 * 4);
    uint32_t new_page_dir_phy_addr = addr_v2p((uint32_t)page_dir_vaddr);     //将进程的页目录表的虚拟地址，转换成物理地址
    page_dir_vaddr[1023] = new_page_dir_phy_addr | PG_US_U | PG_RW_W | PG_P_1;   //页目录表最后一项填自己的地址，为的是动态操作页表
@@ -50,15 +52,18 @@ void start_process(void* filename_) {
    proc_stack->edi = proc_stack->esi = proc_stack->ebp = proc_stack->esp_dummy = 0;
    proc_stack->ebx = proc_stack->edx = proc_stack->ecx = proc_stack->eax = 0;
    proc_stack->gs = 0;		 //用户态根本用不上这个，所以置为0（gs我们一般用于访问显存段，这个让内核态来访问）
-   proc_stack->ds = proc_stack->es = proc_stack->fs = SELECTOR_U_DATA;
+   proc_stack->ds = proc_stack->es = proc_stack->fs = SELECTOR_U_DATA; // 设置RPL3
    proc_stack->eip = function;	 //设定要执行的函数（进程）的地址
    proc_stack->cs = SELECTOR_U_CODE;
    proc_stack->eflags = (EFLAGS_IOPL_0 | EFLAGS_MBS | EFLAGS_IF_1);     //设置用户态下的eflages的相关字段
-   // 初始化中断栈中的栈顶位置，为虚拟地址(0xc0000000 - 0x1000)在用户内存池中申请一个物理页，然后将虚拟地址+4096置为栈顶
-   // 启动多个用户进程时会导致给同一个虚拟地址多次申请物理页 ?? true
+   // 初始化3特权级下的栈 esp指向栈顶
+   /*
+      启动多个用户进程时会导致给同一个虚拟地址多次申请物理页 ??
+      :true, 但是对每个用户进程而言, 即使虚拟地址是相同的, 由于其使用的页表不同, 分配到的真实物理地址也不同, 两两之间并不会有影响
+   */
    proc_stack->esp = (void*)((uint32_t)get_a_page(PF_USER, USER_STACK3_VADDR) + PG_SIZE);
    proc_stack->ss = SELECTOR_U_DATA;
-   /* 
+   /*
       要从高特权级切换到低特权级, 只能是从中断或者调用门返回的情况下, 考虑模拟中断返回的情况
       从中断返回肯定要用到 iretd 指令，iretd 指令会用到栈中的数据作为返回地址，还会加载栈中 eflags
       的值到 eflags 寄存器，如果栈中 cs.rpl 若为更低的特权级，处理器的特权级检查通过后，会将栈中 cs 载入
@@ -67,8 +72,10 @@ void start_process(void* filename_) {
       存到栈中，通过一系列的 pop 操作把用户进程的数据装载到寄存器，最后再通过 iretd 指令退出中断
       即直接调用intr_exit即可
    */
-   // 把 jmp 改成 call 会导致缺页异常??
-   // :call指令会多压入下一条命令的地址到栈中, esp指向栈顶, 需要让esp跳过这个地址才能正常运行
+   /*
+      把 jmp 改成 call 会导致缺页异常 ??
+      :call指令会多压入下一条命令的地址到栈中, esp指向栈顶, 需要让esp跳过这个地址才能正常运行
+   */
    asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (proc_stack) : "memory");
    /*
       当进程第二次被切换到时特权级怎么变回来 ??

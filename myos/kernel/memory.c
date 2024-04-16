@@ -5,6 +5,7 @@
 #include "string.h"
 #include "sync.h"
 #include "thread.h"
+#include "process.h"
 
 #define PG_SIZE 4096    //一页的大小
 #define MEM_BITMAP_BASE 0xc009a000  //这个地址是位图的起始地址，1MB内存布局中，9FBFF是最大一段可用区域的边界，而我们计划这个可用空间最后的位置将来用来
@@ -119,7 +120,18 @@ static void* vaddr_get(enum pool_flags pf, uint32_t pg_cnt) {
       	}
       	vaddr_start = kernel_vaddr.vaddr_start + bit_idx_start * PG_SIZE;
    	} else {
-   			// 用户内存池,将来实现用户进程再补充
+   		struct task_struct* cur = running_thread();
+      	bit_idx_start  = bitmap_scan(&cur->userprog_vaddr.vaddr_bitmap, pg_cnt);
+      	if (bit_idx_start == -1) {
+	 		return NULL;
+    	}
+   		while(cnt < pg_cnt) {
+	 		bitmap_set(&cur->userprog_vaddr.vaddr_bitmap, bit_idx_start + cnt++, 1);
+     	}
+      	vaddr_start = cur->userprog_vaddr.vaddr_start + bit_idx_start * PG_SIZE;
+
+   		/* (0xc0000000 - PG_SIZE)做为用户3级栈已经在start_process被分配 */
+      	ASSERT((uint32_t)vaddr_start < USER_STACK3_VADDR);
    	}
    	return (void*)vaddr_start;
 }
@@ -154,7 +166,6 @@ uint32_t* pte_ptr(uint32_t vaddr) {
    	return pte;
 }
 
-
 /* 页表中添加虚拟地址_vaddr与物理地址_page_phyaddr的映射 */
 static void page_table_add(void* _vaddr, void* _page_phyaddr) {
    	uint32_t vaddr = (uint32_t)_vaddr, page_phyaddr = (uint32_t)_page_phyaddr;
@@ -186,10 +197,11 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr) {
       	uint32_t pde_phyaddr = (uint32_t)palloc(&kernel_pool);
 
       	*pde = (pde_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+		// *pde表示指向的二级页表的起始地址(真实物理地址)  pte是用虚拟地址表示的二级页表中的某个项
 		// 假设 pte == 0xffffffff
 		// memset将0xfffff000 ~ 0xffffffff 所指向的值清0
       	memset((void*)((int)pte & 0xfffff000), 0, PG_SIZE);
-         
+        
       	ASSERT(!(*pte & 0x00000001));
       	*pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);      // US=1,RW=1,P=1
    	}
@@ -217,7 +229,7 @@ void* malloc_page(enum pool_flags pf, uint32_t pg_cnt) {
       	if (page_phyaddr == NULL) {  // 失败时要将曾经已申请的虚拟地址和物理页全部回滚，在将来完成内存回收时再补充
 	 		return NULL;
 		}
-    	page_table_add((void*)vaddr, page_phyaddr); // 在页表中做映射 
+    	page_table_add((void*)vaddr, page_phyaddr); // 在页表中做映射
     	vaddr += PG_SIZE;		 // 下一个虚拟页
    	}
    	return vaddr_start;
@@ -246,12 +258,11 @@ void* get_user_pages(uint32_t pg_cnt) {
 //将虚拟地址转换成真实的物理地址
 uint32_t addr_v2p(uint32_t vaddr) {
    uint32_t* pte = pte_ptr(vaddr);	//将虚拟地址转换成页表对应的页表项的地址
-   // *pte 的低12位应该都是0?  false : vaddr的低12位都是0,*pte是页框的地址
-//    ASSERT((vaddr & 0x00000fff) == 0);
+   // *pte 的低12位应该都是0?  false : *pte是页框的地址 是基于物理地址的起始地址来决定的
    return ((*pte & 0xfffff000) + (vaddr & 0x00000fff));		//(*pte)的值是页表所在的物理页框地址,去掉其低12位的页表项属性+虚拟地址vaddr的低12位
 }
 
-//用于为指定的虚拟地址申请一个物理页，传入参数是这个虚拟地址，要申请的物理页所在的地址池的标志。申请失败，返回null
+//用于为指定的虚拟地址申请一个物理页，传入参数和返回值是这个虚拟地址，申请失败返回null
 void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 	struct pool* mem_pool = pf & PF_KERNEL ? &kernel_pool : &user_pool;
 	lock_acquire(&mem_pool->lock);

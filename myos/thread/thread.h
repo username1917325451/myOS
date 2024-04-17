@@ -89,9 +89,11 @@ struct task_struct {
 
    uint32_t* pgdir;                 // 进程自己页表的虚拟地址
    struct virtual_addr userprog_vaddr;   // 用户进程的虚拟地址
+   struct mem_block_desc u_block_desc[DESC_CNT];   // 用户进程内存块描述符
 
    uint32_t stack_magic;	         //如果线程的栈无限生长，总会覆盖地pcb的信息，那么需要定义个边界数来检测是否栈已经到了PCB的边界
 };
+
 extern struct list thread_ready_list;
 extern struct list thread_all_list;
 

@@ -18,13 +18,13 @@ uint32_t sys_write(char* str) {
    console_put_str(" : ");
    console_put_str(str);
    // 测试每个用户进程申请到的第一块虚拟内存的位置
-   if(running_thread()->pgdir != NULL){
-      void *p = get_user_pages(1);
-      console_put_str(running_thread()->name);
-      console_put_str(" : ");
-      console_put_int(p);
-      console_put_char('\n');
-   }
+   // if(running_thread()->pgdir != NULL){
+   //    void *p = get_user_pages(1);
+   //    console_put_str(running_thread()->name);
+   //    console_put_str(" : ");
+   //    console_put_int(p);
+   //    console_put_char('\n');
+   // }
    return strlen(str);
 }
 
@@ -33,5 +33,6 @@ void syscall_init(void) {
    put_str("syscall_init start\n");
    syscall_table[SYS_GETPID] = sys_getpid;
    syscall_table[SYS_WRITE] = sys_write;
+   syscall_table[SYS_MALLOC] = sys_malloc;
    put_str("syscall_init done\n");
 }

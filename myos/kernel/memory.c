@@ -17,6 +17,9 @@
 //堆区的起始地址并没有跨过256个页表，没关系，反正使用虚拟地址最终都会被我们的页表转换为物理地址，我们建立物理映射的时候，跳过256个页表就行了
 #define K_HEAP_START 0xc0100000
 
+#define PDE_IDX(addr) ((addr & 0xffc00000) >> 22)
+#define PTE_IDX(addr) ((addr & 0x003ff000) >> 12)
+
 /* 核心数据结构，物理内存池， 生成两个实例用于管理内核物理内存池和用户物理内存池 */
 struct pool {
    struct bitmap pool_bitmap;	 // 本内存池用到的位图结构,用于管理物理内存
@@ -170,9 +173,6 @@ static void* palloc(struct pool* m_pool) {
    	return (void*)page_phyaddr;
 }
 
-#define PDE_IDX(addr) ((addr & 0xffc00000) >> 22)
-#define PTE_IDX(addr) ((addr & 0x003ff000) >> 12)
-
 /* 得到虚拟地址vaddr对应的pde的指针 */
 uint32_t* pde_ptr(uint32_t vaddr) {
    	/* 0xfffff是用来访问到页表本身所在的地址 */
@@ -209,7 +209,6 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr) {
       	}
 		else {			//应该不会执行到这，因为上面的ASSERT会先执行。
 	 		PANIC("pte repeat");
-	 		*pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);      // US=1,RW=1,P=1
      	}
    	}
 	else {			    // 页目录项不存在,所以要先创建页目录再创建页表项.
@@ -279,8 +278,8 @@ void* get_user_pages(uint32_t pg_cnt) {
 //将虚拟地址转换成真实的物理地址
 uint32_t addr_v2p(uint32_t vaddr) {
    uint32_t* pte = pte_ptr(vaddr);	//将虚拟地址转换成页表对应的页表项的地址
-   // *pte 的低12位应该都是0?  false : *pte是页框的地址 是基于物理地址的起始地址来决定的
-   return ((*pte & 0xfffff000) + (vaddr & 0x00000fff));		//(*pte)的值是页表所在的物理页框地址,去掉其低12位的页表项属性+虚拟地址vaddr的低12位
+   // *pte 的低12位应该都是0?  false : 有属性位
+   return ((*pte & 0xfffff000) + (vaddr & 0x00000fff));		//(*pte)去掉其低12位的页表项属性+虚拟地址vaddr的低12位即为真实的物理地址
 }
 
 //用于为指定的虚拟地址申请一个物理页，传入参数和返回值是这个虚拟地址，申请失败返回null
@@ -312,6 +311,101 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 	return (void*)vaddr;
 }
 
+// 清除单个物理页所对应的bitmap的标志位
+void pfree(uint32_t pg_phy_addr) {
+	struct pool* mem_pool;
+	uint32_t bit_idx = 0;
+	if (pg_phy_addr >= user_pool.phy_addr_start) {     // 用户物理内存池
+		mem_pool = &user_pool;
+		bit_idx = (pg_phy_addr - user_pool.phy_addr_start) / PG_SIZE;
+	} 
+	else {	  // 内核物理内存池
+		mem_pool = &kernel_pool;
+		bit_idx = (pg_phy_addr - kernel_pool.phy_addr_start) / PG_SIZE;
+	}
+	bitmap_set(&mem_pool->pool_bitmap, bit_idx, 0);	 // 将位图中该位清0
+}
+
+// 去掉页表中虚拟地址vaddr的映射,只去掉vaddr对应的pte
+static void page_table_pte_remove(uint32_t vaddr) {
+   uint32_t* pte = pte_ptr(vaddr);
+   *pte &= ~PG_P_1;	// 将页表项pte的P位置0
+   asm volatile ("invlpg %0"::"m" (vaddr):"memory");    //更新tlb
+}
+
+// 清除_vaddr开始的pg_cnt个虚拟页表的bitmap标志位
+static void vaddr_remove(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
+	uint32_t bit_idx_start = 0, vaddr = (uint32_t)_vaddr, cnt = 0;
+	if (pf == PF_KERNEL) {  // 内核虚拟内存池
+		bit_idx_start = (vaddr - kernel_vaddr.vaddr_start) / PG_SIZE;
+		while(cnt < pg_cnt) {
+			bitmap_set(&kernel_vaddr.vaddr_bitmap, bit_idx_start + cnt++, 0);
+		}
+	}
+	else {  // 用户虚拟内存池
+		struct task_struct* cur_thread = running_thread();
+		bit_idx_start = (vaddr - cur_thread->userprog_vaddr.vaddr_start) / PG_SIZE;
+		while(cnt < pg_cnt) {
+			bitmap_set(&cur_thread->userprog_vaddr.vaddr_bitmap, bit_idx_start + cnt++, 0);
+		}
+	}
+}
+
+// 释放以虚拟地址vaddr为起始的cnt个物理页框
+void mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
+	uint32_t pg_phy_addr;
+	uint32_t vaddr = (int32_t)_vaddr, page_cnt = 0;
+	ASSERT(pg_cnt >=1 && vaddr % PG_SIZE == 0); 
+	pg_phy_addr = addr_v2p(vaddr);  // 获取虚拟地址vaddr对应的物理地址
+
+	/* 确保待释放的物理内存在低端1M+1k大小的页目录+1k大小的页表地址范围外 */
+	ASSERT((pg_phy_addr % PG_SIZE) == 0 && pg_phy_addr >= 0x102000);
+	
+	/* 判断pg_phy_addr属于用户物理内存池还是内核物理内存池 */
+	if (pg_phy_addr >= user_pool.phy_addr_start) {   // 位于user_pool内存池
+		vaddr -= PG_SIZE;
+		while (page_cnt < pg_cnt) {
+			vaddr += PG_SIZE;
+			pg_phy_addr = addr_v2p(vaddr);
+
+			/* 确保物理地址属于用户物理内存池 */
+			ASSERT((pg_phy_addr % PG_SIZE) == 0 && pg_phy_addr >= user_pool.phy_addr_start);
+
+			/* 先将对应的物理页框归还到内存池 */
+			pfree(pg_phy_addr);
+
+			/* 再从页表中清除此虚拟地址所在的页表项pte */
+			page_table_pte_remove(vaddr);
+
+			page_cnt++;
+		}
+		/* 清空虚拟地址的位图中的相应位 */
+		vaddr_remove(pf, _vaddr, pg_cnt);
+
+	} 
+	else {	     // 位于kernel_pool内存池
+		vaddr -= PG_SIZE;
+		while (page_cnt < pg_cnt) {
+			vaddr += PG_SIZE;
+			pg_phy_addr = addr_v2p(vaddr);
+			/* 确保待释放的物理内存只属于内核物理内存池 */
+			ASSERT((pg_phy_addr % PG_SIZE) == 0 && \
+				pg_phy_addr >= kernel_pool.phy_addr_start && \
+				pg_phy_addr < user_pool.phy_addr_start);
+			
+			/* 先将对应的物理页框归还到内存池 */
+			pfree(pg_phy_addr);
+
+				/* 再从页表中清除此虚拟地址所在的页表项pte */
+			page_table_pte_remove(vaddr);
+
+			page_cnt++;
+		}
+	/* 清空虚拟地址的位图中的相应位 */
+		vaddr_remove(pf, _vaddr, pg_cnt);
+	}
+}
+
 /* 返回arena中第idx个内存块的地址 */
 static struct mem_block* arena2block(struct arena* a, uint32_t idx) {
 	return (struct mem_block*)((uint32_t)a + sizeof(struct arena) + idx * a->desc->block_size);
@@ -322,7 +416,7 @@ static struct arena* block2arena(struct mem_block* b) {
    	return (struct arena*)((uint32_t)b & 0xfffff000);
 }
 
-/* 在堆中申请size字节内存 */
+// 在堆中申请size字节内存, 返回虚拟地址
 void* sys_malloc(uint32_t size) {
 	enum pool_flags PF;
 	struct pool* mem_pool;
@@ -336,7 +430,7 @@ void* sys_malloc(uint32_t size) {
 		pool_size = kernel_pool.pool_size;
 		mem_pool = &kernel_pool;
 		descs = k_block_descs;
-	} 
+	}
 	else {				      // 用户进程pcb中的pgdir会在为其分配页表时创建
 		PF = PF_USER;
 		pool_size = user_pool.pool_size;
@@ -383,7 +477,7 @@ void* sys_malloc(uint32_t size) {
 			}
 		}
 
-	/* 若mem_block_desc的free_list中已经没有可用的mem_block,
+		/* 若mem_block_desc的free_list中已经没有可用的mem_block,
 		* 就创建新的arena提供mem_block */
 		if (list_empty(&descs[desc_idx].free_list)) {
 			a = malloc_page(PF, 1);       // 分配1页框做为arena
@@ -422,4 +516,45 @@ void* sys_malloc(uint32_t size) {
 		lock_release(&mem_pool->lock);
 		return (void*)b;
 	}
+}
+
+// 回收内存ptr
+void sys_free(void *ptr) {
+	ASSERT(ptr != NULL);
+	enum pool_flags PF;
+	struct pool* mem_pool;
+	struct task_struct* cur_thread = running_thread();
+	if(cur_thread->pgdir == NULL) {
+		PF = PF_KERNEL;
+		mem_pool = &kernel_pool;
+	}
+	else {
+		PF = PF_USER;
+		mem_pool = &user_pool;
+	}
+	lock_acquire(&mem_pool->lock);
+	struct mem_block *b = ptr;
+	struct arena *a= block2arena(b);
+	ASSERT(a->large == 1 || a->large == 0);
+	// 如果申请的是大块的内存
+	if(a->large == 1) {
+		mfree_page(PF, a, a->cnt);
+	}
+	// 小块内存, 直接回收mem_block
+	else {
+		ASSERT(!elem_find(&a->desc->free_list, &b->free_elem));
+		list_append(&a->desc->free_list, &b->free_elem);
+		put_str("free a mem_block :0x");
+		put_int((uint32_t)b);
+		put_char('\n');
+		// 整个arena都被回收了, 那就释放这个内存页
+		if(++ a->cnt == a->desc->blocks_per_arena) {
+			put_str("free a page :0x");
+			put_int((uint32_t)a);
+			put_char('\n');
+			list_init(&a->desc->free_list);
+			mfree_page(PF, a, 1);
+		}
+	}
+	lock_release(&mem_pool->lock);
 }

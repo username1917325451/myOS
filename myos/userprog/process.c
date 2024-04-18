@@ -13,7 +13,7 @@
 extern void intr_exit(void);
 
 
-//用于初始化进程pcb中的用于管理自己虚拟地址空间的虚拟内存池结构体
+// 用于初始化进程pcb中的用于管理自己虚拟地址空间的虚拟内存池结构体
 void create_user_vaddr_bitmap(struct task_struct* user_prog) {
    user_prog->userprog_vaddr.vaddr_start = USER_VADDR_START;
    // 在bitmap中需要占用的page数量
@@ -24,7 +24,7 @@ void create_user_vaddr_bitmap(struct task_struct* user_prog) {
    bitmap_init(&user_prog->userprog_vaddr.vaddr_bitmap);        //初始化位图
 }
 
-//用于为进程创建页目录表，并初始化（系统映射+页目录表最后一项是自己的物理地址，以此来动态操作页目录表），成功后，返回页目录表虚拟地址，失败返回空地址
+// 用于为进程创建页目录表，并初始化（系统映射+页目录表最后一项是自己的物理地址，以此来动态操作页目录表），成功后，返回页目录表虚拟地址，失败返回空地址
 uint32_t* create_page_dir(void) {
    uint32_t* page_dir_vaddr = get_kernel_pages(1);  //用户进程的页表不能让用户直接访问到,所以在内核空间来申请
    if (page_dir_vaddr == NULL) {

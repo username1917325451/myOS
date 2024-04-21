@@ -544,14 +544,14 @@ void sys_free(void *ptr) {
 	else {
 		ASSERT(!elem_find(&a->desc->free_list, &b->free_elem));
 		list_append(&a->desc->free_list, &b->free_elem);
-		put_str("free a mem_block :0x");
-		put_int((uint32_t)b);
-		put_char('\n');
+		// put_str("free a mem_block :0x");
+		// put_int((uint32_t)b);
+		// put_char('\n');
 		// 整个arena都被回收了, 那就释放这个内存页
 		if(++ a->cnt == a->desc->blocks_per_arena) {
-			put_str("free a page :0x");
-			put_int((uint32_t)a);
-			put_char('\n');
+			// put_str("free a page :0x");
+			// put_int((uint32_t)a);
+			// put_char('\n');
 			list_init(&a->desc->free_list);
 			mfree_page(PF, a, 1);
 		}

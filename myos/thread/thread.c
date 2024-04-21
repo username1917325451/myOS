@@ -17,6 +17,8 @@ static struct list_elem* thread_tag;// 用于保存队列中的线程结点
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
+struct task_struct* idle_thread;    // idle线程
+
 /* 获取当前线程pcb指针 */
 struct task_struct* running_thread() {
    uint32_t esp; 
@@ -82,7 +84,7 @@ void init_thread(struct task_struct* pthread, char* name, int prio) {
    pthread->pgdir = NULL;	//线程没有自己的地址空间，进程的pcb这一项才有用，指向自己的页表虚拟地址	
    pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);     //本操作系统比较简单，线程不会太大，就将线程栈顶定义为pcb地址
                                                                         //+4096的地方，这样就留了一页给线程的信息（包含管理信息与运行信息）空间
-   pthread->stack_magic = 0x19870916;	                                // /定义的边界数字，随便选的数字来判断线程的栈是否已经生长到覆盖pcb信息了              
+   pthread->stack_magic = 0x19173254;	                                // /定义的边界数字，随便选的数字来判断线程的栈是否已经生长到覆盖pcb信息了              
 }
 
 /* 创建一优先级为prio的线程,线程名为name,线程所执行的函数是function(func_arg) */
@@ -119,6 +121,18 @@ static void make_main_thread(void) {
    list_append(&thread_all_list, &main_thread->all_list_tag);
 }
 
+/* 系统空闲时运行的线程 */
+static void idle(void* arg UNUSED) {
+   while(1) {
+      thread_block(TASK_BLOCKED);     
+      /*
+         sti : 开启中断
+         hlt : 使处理器进入睡眠模式
+      */
+      asm volatile ("sti; hlt" : : : "memory");
+   }
+}
+
 /* 实现任务调度 */
 void schedule() {
    ASSERT(intr_get_status() == INTR_OFF);
@@ -134,15 +148,39 @@ void schedule() {
       不需要将其加入队列,因为当前线程不在就绪队列中。*/
    }
 
+   /* 如果就绪队列中没有可运行的任务,就唤醒idle */
+   if (list_empty(&thread_ready_list)) {
+      /* 
+         怎么确保idle已经被block了?
+         : idle在被block之前就绪队列不可能为空
+      */
+      thread_unblock(idle_thread);
+   }
+
    ASSERT(!list_empty(&thread_ready_list));
    thread_tag = NULL;	  // thread_tag清空
-/* 将thread_ready_list队列中的第一个就绪线程弹出,准备将其调度上cpu. */
+   /* 将thread_ready_list队列中的第一个就绪线程弹出,准备将其调度上cpu. */
    thread_tag = list_pop(&thread_ready_list);
    // 找到thread_tag所在结构体的起始地址
    struct task_struct* next = elem2entry(struct task_struct, general_tag, thread_tag);
    next->status = TASK_RUNNING;
    process_activate(next); //激活任务页表、将tss的esp0指向next的内核栈的栈顶
    switch_to(cur, next);
+}
+
+/* 主动让出cpu,换其它线程运行 */
+void thread_yield(void) {
+   struct task_struct* cur = running_thread();   
+   enum intr_status old_status = intr_disable();
+   ASSERT(!elem_find(&thread_ready_list, &cur->general_tag));
+   list_append(&thread_ready_list, &cur->general_tag);
+   cur->status = TASK_READY;
+   schedule();
+   /* 
+      由于这个线程不是中断导致切换的, 因此不会执行iretd
+      也就不会恢复中断, 需要自己打开中断
+   */
+   intr_set_status(old_status);
 }
 
 //将当前正在运行的线程pcb中的状态字段设定为传入的status,一般用于线程主动设定阻塞
@@ -177,7 +215,9 @@ void thread_init(void) {
    put_str("thread_init start\n");
    list_init(&thread_ready_list);
    list_init(&thread_all_list);
-/* 将当前main函数创建为线程 */
+   /* 创建idle线程 */
+   idle_thread = thread_start("idle", 10, idle, NULL);
+   /* 将当前main函数创建为线程 */
    make_main_thread();
    put_str("thread_init done\n");
 }

@@ -88,5 +88,8 @@ struct gdt_desc {
 #define true 1
 #define false 0
 
+#define UNUSED __attribute__ ((unused))
+
+
 #endif
 

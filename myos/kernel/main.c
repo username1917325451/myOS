@@ -17,11 +17,11 @@ void u_prog_b(void);
 int main(void) {
    put_str("I am kernel\n");
    init_all();
-   intr_enable();
-   // process_execute(u_prog_a, "u_prog_a");
+   while(1);
+   process_execute(u_prog_a, "u_prog_a");
    process_execute(u_prog_b, "u_prog_b");
-   // thread_start("k_thread_a", 31, k_thread_a, "I am thread_a");
-   // thread_start("k_thread_b", 31, k_thread_b, "I am thread_b");
+   thread_start("k_thread_a", 31, k_thread_a, "I am thread_a");
+   thread_start("k_thread_b", 31, k_thread_b, "I am thread_b");
    while(1);
    return 0;
 }
@@ -39,7 +39,7 @@ void k_thread_a(void* arg) {
    console_put_int((int)addr3);
    console_put_char('\n');
 
-   int cpu_delay = 9999999;
+   int cpu_delay = 100000;
    while(cpu_delay-- > 0);
    sys_free(addr1);
    sys_free(addr2);
@@ -60,7 +60,7 @@ void k_thread_b(void* arg) {
    console_put_int((int)addr3);
    console_put_char('\n');
 
-   int cpu_delay = 999999;
+   int cpu_delay = 100000;
    while(cpu_delay-- > 0);
    sys_free(addr1);
    sys_free(addr2);
@@ -75,7 +75,7 @@ void u_prog_a(void) {
    void* addr3 = malloc(254);
    printf(" prog_a malloc addr:0x%x,0x%x,0x%x\n", (int)addr1, (int)addr2, (int)addr3);
 
-   int cpu_delay = 999999;
+   int cpu_delay = 100000;
    while(cpu_delay-- > 0);
    free(addr1);
    free(addr2);
@@ -85,16 +85,13 @@ void u_prog_a(void) {
 
 /* 测试用户进程 */
 void u_prog_b(void) {
-   void* addr1 = malloc(800);
-   void* addr2 = malloc(1024);
-   void* addr3 = malloc(780);
+   void* addr1 = malloc(256);
+   void* addr2 = malloc(255);
+   void* addr3 = malloc(254);
    printf(" prog_b malloc addr:0x%x,0x%x,0x%x\n", (int)addr1, (int)addr2, (int)addr3);
-   free(addr2);
-   free(addr1);
-   addr2 = malloc(600);
-   addr1 = malloc(900);
-   printf("addr2 malloc again : 0x%x\n", addr2);
-   printf("addr1 malloc again : 0x%x\n", addr1);
+
+   int cpu_delay = 100000;
+   while(cpu_delay-- > 0);
    free(addr1);
    free(addr2);
    free(addr3);

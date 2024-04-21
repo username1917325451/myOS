@@ -14,6 +14,8 @@
 #define READ_WRITE_LATCH    3   //用在控制字中设定读/写/锁存操作位，这里表示先写入低字节，然后写入高字节
 #define PIT_CONTROL_PORT    0x43    //控制字寄存器的端口
 
+#define mil_seconds_per_intr (1000 / IRQ0_FREQUENCY)
+
 /* 把操作的计数器counter_no、读写锁属性rwl、计数器模式counter_mode写入模式控制寄存器并赋予初始值counter_value */
 static void frequency_set(uint8_t counter_port, \
 			  uint8_t counter_no, \
@@ -36,18 +38,34 @@ uint32_t ticks;          // ticks是内核自中断开启以来总共的嘀嗒�
 static void intr_timer_handler(void) {
    struct task_struct* cur_thread = running_thread();
 
-   ASSERT(cur_thread->stack_magic == 0x19870916);         // 检查栈是否溢出
+   ASSERT(cur_thread->stack_magic == 0x19173254);         // 检查栈是否溢出
 
    cur_thread->elapsed_ticks++;	  // 记录此线程占用的cpu时间嘀
    ticks++;	  //从内核第一次处理时间中断后开始至今的滴哒数,内核态和用户态总共的嘀哒数
 
    if (cur_thread->ticks == 0) {	  // 若进程时间片用完就开始调度新的进程上cpu
       schedule();
-      // put_str("\n!!!!!!!!!!!!!!!\n");
    }
    else {				  // 将当前进程的时间片-1
       cur_thread->ticks--;
    }
+}
+
+/* 以tick为单位的sleep,任何时间形式的sleep会转换此ticks形式 */
+static void ticks_to_sleep(uint32_t sleep_ticks) {
+   uint32_t start_tick = ticks;
+   /* 若间隔的ticks数不够便让出cpu */
+   while (ticks - start_tick < sleep_ticks) {
+      thread_yield();
+   }
+}
+
+/* 以毫秒为单位的sleep   1秒= 1000毫秒 */
+void mtime_sleep(uint32_t m_seconds) {
+   // 计算一共需要多少次中断(上取整)
+   uint32_t sleep_ticks = DIV_ROUND_UP(m_seconds, mil_seconds_per_intr);
+   ASSERT(sleep_ticks > 0);
+   ticks_to_sleep(sleep_ticks); 
 }
 
 /* 初始化PIT8253 */

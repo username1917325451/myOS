@@ -21,7 +21,7 @@ void memcpy(void* dst_, const void* src_, uint32_t size){
         dst ++,src ++;
     }
 }
-//
+//比较a_地址和b_地址起始的size字节的大小 _a > _b 返回1
 int memcmp(const void* a_, const void* b_, uint32_t size){
     const uint8_t* a = (const uint8_t*)a_;
     const uint8_t* b = (const uint8_t*)b_;

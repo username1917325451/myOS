@@ -101,12 +101,14 @@ void page_dir_activate(struct task_struct* p_thread) {
 //用于加载进程自己的页目录表，同时更新进程自己的0特权级esp0到TSS中
 void process_activate(struct task_struct* p_thread) {
    ASSERT(p_thread != NULL);
-/* 激活该进程或线程的页表 */
+   /* 激活该进程或线程的页表 */
    page_dir_activate(p_thread);
 
-   if (p_thread->pgdir)
-      update_tss_esp(p_thread);   /* 更新该进程的esp0,用于此进程被中断时保留上下文 */
-   else{
+   if (p_thread->pgdir) {
+      /* 更新该进程的esp0,用于此进程被中断时保留上下文和特权级 */
+      update_tss_esp(p_thread);
+   }
+   else {
       /* 内核线程特权级本身就是0,处理器进入中断时并不会从tss中获取0特权级栈地址,故不需要更新esp0 */
    }
 }

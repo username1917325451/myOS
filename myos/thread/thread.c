@@ -84,7 +84,21 @@ void init_thread(struct task_struct* pthread, char* name, int prio) {
    pthread->pgdir = NULL;	//线程没有自己的地址空间，进程的pcb这一项才有用，指向自己的页表虚拟地址	
    pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);     //本操作系统比较简单，线程不会太大，就将线程栈顶定义为pcb地址
                                                                         //+4096的地方，这样就留了一页给线程的信息（包含管理信息与运行信息）空间
-   pthread->stack_magic = 0x19173254;	                                // /定义的边界数字，随便选的数字来判断线程的栈是否已经生长到覆盖pcb信息了              
+   /* 标准输入输出先空出来 */
+   pthread->fd_table[0] = 0;
+   pthread->fd_table[1] = 1;
+   pthread->fd_table[2] = 2;
+   /* 其余的全置为-1 */
+   uint8_t fd_idx = 3;
+   while (fd_idx < MAX_FILES_OPEN_PER_PROC)
+   {
+      pthread->fd_table[fd_idx] = -1;
+      fd_idx++;
+   }
+   pthread->cwd_inode_nr = 0;         // 以根目录做为默认工作路径
+   pthread->parent_pid = -1;          // -1表示没有父进程
+
+   pthread->stack_magic = 0x19173254;	                                //定义的边界数字，随便选的数字来判断线程的栈是否已经生长到覆盖pcb信息了              
 }
 
 /* 创建一优先级为prio的线程,线程名为name,线程所执行的函数是function(func_arg) */

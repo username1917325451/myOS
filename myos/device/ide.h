@@ -13,7 +13,7 @@ struct partition {
     char name[8];		 // 分区名称
     struct super_block* sb;	 // 本分区的超级块
     struct bitmap block_bitmap;	 // 块位图
-    struct bitmap inode_bitmap;	 // i结点位图
+    struct bitmap inode_bitmap;	 // inode位图
     struct list open_inodes;	 // 本分区打开的i结点队列
 };
 
@@ -40,6 +40,7 @@ struct ide_channel {
 void ide_init(void);
 extern uint8_t channel_cnt;
 extern struct ide_channel channels[];
+extern struct list partition_list;
 
 void ide_read(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);
 void ide_write(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);

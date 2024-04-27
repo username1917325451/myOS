@@ -35,9 +35,37 @@ enum oflags
     O_CREAT = 4 // 创建
 };
 
+/* 文件读写位置偏移量 */
+enum whence
+{
+    SEEK_SET = 1,
+    SEEK_CUR,
+    SEEK_END
+};
+
+/* 文件属性结构体 */
+struct stat
+{
+    uint32_t st_ino;             // inode编号
+    uint32_t st_size;            // 尺寸
+    enum file_types st_filetype; // 文件类型
+};
+
 void filesys_init(void);
 int32_t path_depth_cnt(char *pathname);
 int32_t sys_open(const char *pathname, uint8_t flags);
-
+int32_t sys_close(int32_t fd);
+int32_t sys_write(int32_t fd, const void *buf, uint32_t count);
+int32_t sys_read(int32_t fd, void *buf, uint32_t count);
+int32_t sys_unlink(const char *pathname);
+int32_t sys_mkdir(const char *pathname);
+struct dir *sys_opendir(const char *name);
+int32_t sys_closedir(struct dir *dir);
+struct dir_entry *sys_readdir(struct dir *dir);
+void sys_rewinddir(struct dir *dir);
+int32_t sys_rmdir(const char *pathname);
+char *sys_getcwd(char *buf, uint32_t size);
+int32_t sys_chdir(const char *path);
+int32_t sys_stat(const char *path, struct stat *buf);
 
 #endif

@@ -54,15 +54,17 @@ uint32_t getpid() {
    return _syscall0(SYS_GETPID);
 }
 
-/* 打印字符串str */
-uint32_t write(char *str) {
+/* 把buf中count个字符写入文件描述符fd */
+uint32_t write(int32_t fd, const void *buf, uint32_t count)
+{
    /* 
       用户进程在系统调用时可以使用打印函数，但是在用户态直接使用打印函数会报GP异常 ??
       当前的RPL是3 在进行系统调用时进入内核态 RPL为0 但依旧使用的是用户进程的页表
       因此可以使用打印函数
    */
-   return _syscall1(SYS_WRITE, str);
+    return _syscall3(SYS_WRITE, fd, buf, count);
 }
+
 
 /* 申请size字节大小的内存,并返回结果 */
 void* malloc(uint32_t size) {

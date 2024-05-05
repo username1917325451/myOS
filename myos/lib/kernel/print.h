@@ -6,4 +6,5 @@ void put_char(uint8_t char_asci);      //在stdint.h中uint8_t得到了定义，
 void put_str(char* messags);
 void put_int(uint32_t num);	        // 以16进制打印
 void set_cursor(uint32_t cursor_pos);
+void cls_screen(void);
 #endif

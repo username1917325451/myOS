@@ -207,7 +207,7 @@ rollback:
 int32_t file_open(uint32_t inode_no, uint8_t flag)
 {
     /* 
-        涉及到公共资源的修改,是否需要关中断/上锁 ??
+        file_open涉及到公共资源的修改,是否需要关中断/上锁 ??
         -> false: file_open最终是通过系统调用来运行的,自然是关闭中断的状态
     */
     int fd_idx = get_free_slot_in_global();

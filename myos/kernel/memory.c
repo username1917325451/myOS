@@ -278,7 +278,7 @@ void* get_user_pages(uint32_t pg_cnt) {
 //将虚拟地址转换成真实的物理地址
 uint32_t addr_v2p(uint32_t vaddr) {
    uint32_t* pte = pte_ptr(vaddr);	//将虚拟地址转换成页表对应的页表项的地址
-   // *pte 的低12位应该都是0?  false : 有属性位
+   // *pte 的低12位应该都是0??  false : 有属性位
    return ((*pte & 0xfffff000) + (vaddr & 0x00000fff));		//(*pte)去掉其低12位的页表项属性+虚拟地址vaddr的低12位即为真实的物理地址
 }
 
@@ -309,6 +309,22 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 	page_table_add((void*)vaddr, page_phyaddr); 
 	lock_release(&mem_pool->lock);
 	return (void*)vaddr;
+}
+
+/* 给虚拟地址vaddr分配一页物理内存,专门针对fork时不修改bitmap的情况 */
+void *get_a_page_without_opvaddrbitmap(enum pool_flags pf, uint32_t vaddr)
+{
+    struct pool *mem_pool = pf & PF_KERNEL ? &kernel_pool : &user_pool;
+    lock_acquire(&mem_pool->lock);
+    void *page_phyaddr = palloc(mem_pool);
+    if (page_phyaddr == NULL)
+    {
+        lock_release(&mem_pool->lock);
+        return NULL;
+    }
+    page_table_add((void *)vaddr, page_phyaddr);
+    lock_release(&mem_pool->lock);
+    return (void *)vaddr;
 }
 
 // 清除单个物理页所对应的bitmap的标志位
@@ -459,7 +475,10 @@ void* sys_malloc(uint32_t size) {
 			a->cnt = page_cnt;
 			a->large = true;
 			lock_release(&mem_pool->lock);
-			// 会导致分配到的地址不是PAGE_SIZE的整数倍 ??
+			/*
+				arna会导致分配到的地址不是PAGE_SIZE的整数倍 ??
+				:true
+			*/
 			return (void*)(a + 1);		 // 跨过arena大小，把剩下的内存返回
 		}
 		else {

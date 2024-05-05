@@ -23,4 +23,3 @@ switch_to:
                            ; 如果next时第一次执行, esp会指向eip
    ret				 			; 返回到上面的switch_to下面的那句注释的返回地址,
 				 					; 未由中断进入,第一次执行时会返回到kernel_thread
-

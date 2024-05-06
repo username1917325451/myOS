@@ -6,6 +6,7 @@
 #define BITS_PER_SECTOR 4096	    // 每扇区的位数
 #define SECTOR_SIZE 512		    // 扇区字节大小
 #define BLOCK_SIZE SECTOR_SIZE	    // 块字节大小
+#define MAX_PATH_LEN 512 // 路径最大长度
 
 /* 文件类型 */
 enum file_types {
@@ -15,8 +16,6 @@ enum file_types {
 };
 
 extern struct partition* cur_part;
-
-#define MAX_PATH_LEN 512 // 路径最大长度
 
 /* 用来记录查找文件过程中已找到的上级路径,也就是查找文件过程中"走过的地方" */
 struct path_search_record

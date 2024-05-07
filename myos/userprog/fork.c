@@ -201,7 +201,7 @@ pid_t sys_fork(void)
         return -1;
     }
 
-    /* 添加到就绪线程队列和所有线程队列,子进程由调试器安排运行 */
+    /* 添加到就绪线程队列和所有线程队列,等待被执行 */
     ASSERT(!elem_find(&thread_ready_list, &child_thread->general_tag));
     list_append(&thread_ready_list, &child_thread->general_tag);
     ASSERT(!elem_find(&thread_all_list, &child_thread->all_list_tag));

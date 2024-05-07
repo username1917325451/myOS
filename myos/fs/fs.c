@@ -962,6 +962,7 @@ char *sys_getcwd(char *buf, uint32_t size)
     {
         buf[0] = '/';
         buf[1] = 0;
+        sys_free(io_buf);
         return buf;
     }
 

@@ -291,7 +291,7 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 	/* 若当前是用户进程申请用户内存,就修改用户进程自己的虚拟地址位图 */
 	if (cur->pgdir != NULL && pf == PF_USER) {
 		bit_idx = (vaddr - cur->userprog_vaddr.vaddr_start) / PG_SIZE;
-		ASSERT(bit_idx > 0); // ASSERT(bit_idx >= 0) ??
+		ASSERT(bit_idx >= 0);
 		bitmap_set(&cur->userprog_vaddr.vaddr_bitmap, bit_idx, 1);
 	}
 	else if (cur->pgdir == NULL && pf == PF_KERNEL){
@@ -305,7 +305,10 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 	}
 	void* page_phyaddr = palloc(mem_pool);
 	if (page_phyaddr == NULL)
+	{
+		lock_release(&mem_pool->lock);
 		return NULL;
+	}
 	page_table_add((void*)vaddr, page_phyaddr); 
 	lock_release(&mem_pool->lock);
 	return (void*)vaddr;

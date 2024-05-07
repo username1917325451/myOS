@@ -4,7 +4,6 @@
 #include "inode.h"
 #include "fs.h"
 
-
 #define MAX_FILE_NAME_LEN  16	 // 最大文件名长度
 
 /* 目录结构 */

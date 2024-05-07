@@ -5,7 +5,7 @@
 #include "memory.h"
 
 #define MAX_FILES_OPEN_PER_PROC 8
-
+#define TASK_NAME_LEN 16
                                 //定义一种叫thread_fun的函数类型，该类型返回值是空，参数是一个地址(这个地址用来指向自己的参数)。
                                 //这样定义，这个类型就能够具有很大的通用性，很多函数都是这个类型
 typedef void thread_func(void*);

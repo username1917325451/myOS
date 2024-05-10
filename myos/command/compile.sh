@@ -1,5 +1,4 @@
 ####  此脚本应该在command目录下执行
-####  写入完成后要将操作系统中读入程序的大小修改为此次写入的大小
 
 if [[ ! -d "../lib" || ! -d "../build" ]];then
    echo "dependent dir don\`t exist!"
@@ -12,29 +11,26 @@ if [[ ! -d "../lib" || ! -d "../build" ]];then
    exit
 fi
 CC="gcc-4.4"
-BIN="prog_no_arg"
+BIN="prog_arg"
 CFLAGS="-Wall -c -fno-builtin -W -Wstrict-prototypes \
-      -Wmissing-prototypes -Wsystem-headers -m32 -fno-stack-protector"
-LIB="../lib/"
+    -Wmissing-prototypes -Wsystem-headers -m32 -fno-stack-protector"
+LIBS="-I ../lib/ -I ../lib/kernel/ -I ../lib/user/ -I \
+      ../kernel/ -I ../device/ -I ../thread/ -I \
+      ../userprog/ -I ../fs/ -I ../shell/"
 OBJS="../build/string.o ../build/syscall.o \
-      ../build/stdio.o ../build/assert.o"
+      ../build/stdio.o ../build/assert.o ../build/fs.o \
+      start.o ../build/debug.o ../build/assert.o \
+      ../build/buildin_cmd.o"
 DD_IN=$BIN
-DD_OUT="/home/shenhaomin/work/bochs/hd60M.img" 
+DD_OUT="/home/shenhaomin/work/bochs/hd60M.img"
 
-$CC $CFLAGS -I $LIB -o $BIN".o" $BIN".c"
-ld -e main $BIN".o" $OBJS -o $BIN -m elf_i386
+nasm -f elf ./start.S -o ./start.o
+ar rcs simple_crt.a $OBJS start.o
+$CC $CFLAGS $LIBS -o $BIN".o" $BIN".c"
+ld $BIN".o" simple_crt.a -o $BIN -m elf_i386
 SEC_CNT=$(ls -l $BIN|awk '{printf("%d", ($5+511)/512)}')
 
 if [[ -f $BIN ]];then
    dd if=./$DD_IN of=$DD_OUT bs=512 \
    count=$SEC_CNT seek=300 conv=notrunc
 fi
-
-##########   以上核心就是下面这三条命令   ##########
-#gcc -Wall -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes \
-#   -Wsystem-headers -I ../lib -o prog_no_arg.o prog_no_arg.c
-#ld -e main prog_no_arg.o ../build/string.o ../build/syscall.o\
-#   ../build/stdio.o ../build/assert.o -o prog_no_arg
-#dd if=prog_no_arg of=/home/work/my_workspace/bochs/hd60M.img \
-#   bs=512 count=10 seek=300 conv=notrunc
-

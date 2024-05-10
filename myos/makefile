@@ -30,7 +30,7 @@ OBJS=$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o \
 	$(BUILD_DIR)/file.o $(BUILD_DIR)/inode.o \
 	$(BUILD_DIR)/fork.o \
 	$(BUILD_DIR)/shell.o $(BUILD_DIR)/buildin_cmd.o \
-	$(BUILD_DIR)/exec.o $(BUILD_DIR)/assert.o
+	$(BUILD_DIR)/exec.o $(BUILD_DIR)/assert.o $(BUILD_DIR)/wait_exit.o
 #顺序最好是调用在前，实现在后
 
 ######################编译两个启动文件的代码#####################################
@@ -131,6 +131,9 @@ $(BUILD_DIR)/buildin_cmd.o:shell/buildin_cmd.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 $(BUILD_DIR)/exec.o:userprog/exec.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/wait_exit.o:userprog/wait_exit.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 ###################编译汇编内核代码#####################################################

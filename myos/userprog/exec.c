@@ -5,6 +5,7 @@
 #include "fs.h"
 #include "string.h"
 #include "thread.h"
+#include "stdioKernel.h"
 
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
 typedef uint16_t Elf32_Half;
@@ -174,6 +175,7 @@ int32_t sys_execv(const char *path, const char *argv[])
     int32_t entry_point = load(path);
     if (entry_point == -1)
     { // 若加载失败则返回-1
+        printk("sys_execv : the path %s is not a program\n", path);
         return -1;
     }
 

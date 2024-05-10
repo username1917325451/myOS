@@ -173,14 +173,14 @@ static void* palloc(struct pool* m_pool) {
    	return (void*)page_phyaddr;
 }
 
-/* 得到虚拟地址vaddr对应的pde的指针 */
+/* 得到虚拟地址vaddr对应的pde的指针(虚拟地址) */
 uint32_t* pde_ptr(uint32_t vaddr) {
    	/* 0xfffff是用来访问到页表本身所在的地址 */
 	uint32_t* pde = (uint32_t*)((0xfffff000) + PDE_IDX(vaddr) * 4);
    	return pde;
 }
 
-/* 得到虚拟地址vaddr对应的pte指针*/
+/* 得到虚拟地址vaddr对应的pte指针(虚拟地址)*/
 uint32_t* pte_ptr(uint32_t vaddr) {
    	/* 先访问到页表自己 + 再用页目录项pde(页目录内页表的索引)做为pte的索引访问到页表 + 再用pte的索引做为页内偏移*/
 	uint32_t* pte = (uint32_t*)(0xffc00000 + ((vaddr & 0xffc00000) >> 10) + PTE_IDX(vaddr) * 4);
@@ -368,6 +368,24 @@ static void vaddr_remove(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
 			bitmap_set(&cur_thread->userprog_vaddr.vaddr_bitmap, bit_idx_start + cnt++, 0);
 		}
 	}
+}
+
+/* 根据物理页框地址pg_phy_addr在相应的内存池的位图清0,不改动页表*/
+void free_a_phy_page(uint32_t pg_phy_addr)
+{
+    struct pool *mem_pool;
+    uint32_t bit_idx = 0;
+    if (pg_phy_addr >= user_pool.phy_addr_start)
+    {
+        mem_pool = &user_pool;
+        bit_idx = (pg_phy_addr - user_pool.phy_addr_start) / PG_SIZE;
+    }
+    else
+    {
+        mem_pool = &kernel_pool;
+        bit_idx = (pg_phy_addr - kernel_pool.phy_addr_start) / PG_SIZE;
+    }
+    bitmap_set(&mem_pool->pool_bitmap, bit_idx, 0);
 }
 
 // 释放以虚拟地址vaddr为起始的cnt个物理页框

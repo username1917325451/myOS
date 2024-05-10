@@ -340,7 +340,13 @@ static int search_file(const char *pathname, struct path_search_record *searched
 
     uint32_t path_len = strlen(pathname);
     /* 保证pathname至少是这样的路径/x且小于最大长度 */
-    ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
+    // ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
+    if(pathname[0] != '/'){
+        printk("!!!serch_file : %s\n",pathname);
+    }
+    ASSERT(pathname[0] == '/');
+    ASSERT(path_len > 1);
+    ASSERT(path_len < MAX_PATH_LEN);
     char *sub_path = (char *)pathname;
     struct dir *parent_dir = &root_dir;
     struct dir_entry dir_e;

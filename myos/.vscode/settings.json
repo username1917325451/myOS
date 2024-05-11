@@ -4,6 +4,7 @@
         "stdio.h": "c",
         "thread.h": "c",
         "fs.h": "c",
-        "global.h": "c"
+        "global.h": "c",
+        "memory.h": "c"
     }
 }

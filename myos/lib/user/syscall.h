@@ -3,33 +3,36 @@
 #include "stdint.h"
 #include "thread.h"
 #include "fs.h"
-enum SYSCALL_NR {
-   SYS_GETPID,
-   SYS_WRITE,
-   SYS_MALLOC,
-   SYS_FREE,
-   SYS_FORK,
-   SYS_READ,
-   SYS_PUTCHAR,
-   SYS_CLEAR,
-   SYS_GETCWD,
-   SYS_OPEN,
-   SYS_CLOSE,
-   SYS_LSEEK,
-   SYS_UNLINK,
-   SYS_MKDIR,
-   SYS_OPENDIR,
-   SYS_CLOSEDIR,
-   SYS_CHDIR,
-   SYS_RMDIR,
-   SYS_READDIR,
-   SYS_REWINDDIR,
-   SYS_STAT,
-   SYS_PS,
-   SYS_EXECV,
-   SYS_EXIT,
-   SYS_WAIT
+enum SYSCALL_NR
+{
+    SYS_GETPID,
+    SYS_WRITE,
+    SYS_MALLOC,
+    SYS_FREE,
+    SYS_FORK,
+    SYS_READ,
+    SYS_PUTCHAR,
+    SYS_CLEAR,
+    SYS_GETCWD,
+    SYS_OPEN,
+    SYS_CLOSE,
+    SYS_LSEEK,
+    SYS_UNLINK,
+    SYS_MKDIR,
+    SYS_OPENDIR,
+    SYS_CLOSEDIR,
+    SYS_CHDIR,
+    SYS_RMDIR,
+    SYS_READDIR,
+    SYS_REWINDDIR,
+    SYS_STAT,
+    SYS_PS,
+    SYS_EXECV,
+    SYS_EXIT,
+    SYS_WAIT,
+    SYS_PIPE
 };
+
 // 用户侧进行系统调用的入口
 uint32_t getpid(void);
 uint32_t write(int32_t fd, const void *buf, uint32_t count);
@@ -56,6 +59,6 @@ void ps(void);
 int execv(const char* pathname, char** argv);
 void exit(int32_t status);
 pid_t wait(int32_t* status);
-
+int32_t pipe(int32_t pipefd[2]);
 
 #endif

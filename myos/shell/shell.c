@@ -11,7 +11,7 @@
 static char cmd_line[cmd_len] = {0};
 static char cmd_line_for_argv[cmd_len];
 
-char cwd_cache[64] = {0};
+char cwd_cache[MAX_PATH_LEN] = {0};
 
 char *argv[MAX_ARG_NR];              // argv必须为全局变量，为了以后exec的程序可访问参数
 char final_path[MAX_PATH_LEN] = {0}; // 用于洗路径时的缓冲
@@ -266,8 +266,6 @@ void my_shell(void)
         }
         else
         { // 一般无管道操作的命令
-            // printf("this is a no pipe call\n");
-            // while(1);
             cmd_execute(argc, argv);
         }
     }

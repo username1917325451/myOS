@@ -5,6 +5,21 @@
         "thread.h": "c",
         "fs.h": "c",
         "global.h": "c",
-        "memory.h": "c"
+        "memory.h": "c",
+        "*.tcc": "c",
+        "algorithm": "c",
+        "istream": "c",
+        "limits": "c",
+        "random": "c",
+        "string_view": "c",
+        "numeric": "c",
+        "exception": "c",
+        "fstream": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "streambuf": "c",
+        "memory_resource": "c"
     }
 }

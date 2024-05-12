@@ -112,10 +112,6 @@ void thread_create(struct task_struct* pthread, thread_func function, void* func
 void init_thread(struct task_struct* pthread, char* name, int prio) {
    memset(pthread, 0, sizeof(*pthread));                                //把pcb初始化为0
    pthread->pid = allocate_pid();
-   // put_str(name);
-   // put_str(" ::: ");
-   // put_int(pthread->pid);
-   // put_char('\n');
    strcpy(pthread->name, name);                                         //将传入的线程的名字填入线程的pcb中
 
    if(pthread == main_thread){

@@ -50,8 +50,8 @@ char ioq_getchar(struct ioqueue* ioq) {
  * 也就是唤醒当前线程自己*/
     while (ioq_empty(ioq)) {         //判断缓冲区是不是空的，如果是空的，就把自己阻塞起来
         //只允许一个线程在wait
-        lock_acquire(&ioq->lock); // 获取到了锁 又切换了线程?
-        ioq_wait(&ioq->consumer); // 线程会连续两次进入block状态?
+        lock_acquire(&ioq->lock); // 获取到了锁 又切换了线程?? 这里的锁并不是为了保护公共资源
+        ioq_wait(&ioq->consumer);
         lock_release(&ioq->lock);
     }
 

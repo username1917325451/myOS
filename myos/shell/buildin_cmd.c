@@ -146,29 +146,24 @@ void buildin_ls(uint32_t argc, char **argv)
             { // 如果是参数-l
                 long_info = true;
             }
-            else if (strcmp("-h", argv[arg_idx]) == 0)
-            { // 参数-h
-                printf("usage: -l list all infomation about the file.\n-h for help\nlist all files in the current dirctory if no option\n");
-                return;
-            }
             else
-            { // 只支持-h -l两个选项
-                printf("ls: invalid option %s\nTry `ls -h' for more information.\n", argv[arg_idx]);
+            {
+                printf("ls: invalid option %s\nTry `ls -l' for more information.\n", argv[arg_idx]);
                 return;
             }
         }
         else
         { // ls的路径参数
-            if (arg_path_nr == 0)
-            {
-                pathname = argv[arg_idx];
-                arg_path_nr = 1;
-            }
-            else
-            {
-                printf("ls: only support one path\n");
-                return;
-            }
+            // if (arg_path_nr == 0)
+            // {
+            //     pathname = argv[arg_idx];
+            //     arg_path_nr = 1;
+            // }
+            // else
+            // {
+            //     printf("ls: only support one path\n");
+            //     return;
+            // }
         }
         arg_idx++;
     }
@@ -261,11 +256,11 @@ void buildin_ls(uint32_t argc, char **argv)
 /* ps命令内建函数 */
 void buildin_ps(uint32_t argc, char **argv UNUSED)
 {
-    if (argc != 1)
-    {
-        printf("ps: no argument support!\n");
-        return;
-    }
+    // if (argc != 1)
+    // {
+    //     printf("ps: no argument support!\n");
+    //     return;
+    // }
     ps();
 }
 
@@ -360,4 +355,10 @@ int32_t buildin_rm(uint32_t argc, char **argv)
         }
     }
     return ret;
+}
+
+/* 显示内建命令列表 */
+void buildin_help(uint32_t argc UNUSED, char **argv UNUSED)
+{
+    help();
 }

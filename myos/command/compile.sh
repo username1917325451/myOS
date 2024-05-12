@@ -11,16 +11,14 @@ if [[ ! -d "../lib" || ! -d "../build" ]];then
    exit
 fi
 CC="gcc-4.4"
-BIN="prog_pipe"
+BIN="prog_no_arg"
 CFLAGS="-Wall -c -fno-builtin -W -Wstrict-prototypes \
     -Wmissing-prototypes -Wsystem-headers -m32 -fno-stack-protector"
 LIBS="-I ../lib/ -I ../lib/kernel/ -I ../lib/user/ -I \
       ../kernel/ -I ../device/ -I ../thread/ -I \
       ../userprog/ -I ../fs/ -I ../shell/"
 OBJS="../build/string.o ../build/syscall.o \
-      ../build/stdio.o ../build/assert.o ../build/fs.o \
-      start.o ../build/debug.o ../build/assert.o \
-      ../build/buildin_cmd.o"
+      ../build/stdio.o ../build/assert.o start.o"
 DD_IN=$BIN
 DD_OUT="/home/shenhaomin/work/bochs/hd60M.img"
 

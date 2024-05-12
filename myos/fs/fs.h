@@ -69,5 +69,6 @@ char *sys_getcwd(char *buf, uint32_t size);
 int32_t sys_chdir(const char *path);
 int32_t sys_stat(const char *path, struct stat *buf);
 void sys_putchar(char char_asci);
+void sys_help(void);
 
 #endif

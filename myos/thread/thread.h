@@ -91,7 +91,7 @@ struct task_struct
    struct list_elem all_list_tag;                // all_list_tag的作用是用于线程队列thread_all_list（这个队列用于管理所有线程）中的结点
    uint32_t *pgdir;                              // 进程自己页表的虚拟地址
    struct virtual_addr userprog_vaddr;           // 用户进程的虚拟地址
-   int32_t fd_table[MAX_FILES_OPEN_PER_PROC];    // 已打开文件数组
+   int32_t fd_table[MAX_FILES_OPEN_PER_PROC];    // 保存对应的文件在全局文件数组中使用的下标
    uint32_t cwd_inode_nr;                        // 进程所在的工作目录的inode编号
    int16_t parent_pid;                           // 父进程pid
    struct mem_block_desc u_block_desc[DESC_CNT]; // 用户进程内存块描述符

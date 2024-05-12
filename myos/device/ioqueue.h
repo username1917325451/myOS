@@ -4,7 +4,7 @@
 #include "thread.h"
 #include "sync.h"
 
-#define bufsize 64  //定义缓冲区大小.
+#define bufsize 2048  //定义缓冲区大小.
 
 /* 环形队列 */
 struct ioqueue {

@@ -12,6 +12,7 @@
 #include "console.h"
 #include "keyboard.h"
 #include "ioqueue.h"
+#include "stdlib.h"
 
 struct partition* cur_part;	 // 默认情况下操作的是哪个分区
 
@@ -343,6 +344,7 @@ static int search_file(const char *pathname, struct path_search_record *searched
     // ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
     if(pathname[0] != '/'){
         printk("!!!serch_file : %s\n",pathname);
+        return -1;
     }
     ASSERT(pathname[0] == '/');
     ASSERT(path_len > 1);
@@ -575,6 +577,9 @@ int32_t sys_close(int32_t fd)
 }
 
 /* 将buf中连续count个字节写入文件描述符fd,成功则返回写入的字节数,失败返回-1 */
+/*
+    是否造成覆盖 ??
+*/
 int32_t sys_write(int32_t fd, const void *buf, uint32_t count)
 {
     if (fd < 0)  
@@ -583,17 +588,16 @@ int32_t sys_write(int32_t fd, const void *buf, uint32_t count)
         return -1;
     }
     if(is_pipe(fd))
-    {
         return pipe_write(fd, buf, count);
-    }
-    if (fd == stdout_no)
+    uint32_t _fd = fd_local2global(fd);
+    // 判断最终指向的文件是不是标准输出
+    if (_fd == stdout_no)
     {
         char tmp_buf[1024] = {0};
         memcpy(tmp_buf, buf, count);
         console_put_str(tmp_buf);
         return count;
     }
-    uint32_t _fd = fd_local2global(fd);
     struct file *wr_file = &file_table[_fd];
     if(wr_file == NULL || wr_file->fd_inode == NULL)
     {
@@ -612,7 +616,10 @@ int32_t sys_write(int32_t fd, const void *buf, uint32_t count)
     }
 }
 
-/* 从文件描述符fd指向的文件中读取count个字节到buf,若成功则返回读出的字节数,到文件尾则返回-1 */
+/* 
+    从文件描述符fd指向的文件中读取count个字节到buf(标准输入除外,文件大小<count时会取较小值),
+    若成功则返回读出的字节数,否则返回-1
+*/
 int32_t sys_read(int32_t fd, void *buf, uint32_t count)
 {
     ASSERT(buf != NULL);
@@ -623,13 +630,14 @@ int32_t sys_read(int32_t fd, void *buf, uint32_t count)
         return ret;
     }
     if(is_pipe(fd))
-    {
         return pipe_read(fd, buf, count);
-    }
-    if (fd == stdin_no)
+    uint32_t _fd = fd_local2global(fd);
+    // 判断最终指向的文件是不是标准输入
+    if (_fd == stdin_no)
     {
         char *buffer = buf;
         uint32_t bytes_read = 0;
+        // 缓冲区没有的话会被阻塞
         while (bytes_read < count)
         {
             // 从键盘缓冲区中读一个字节
@@ -640,10 +648,7 @@ int32_t sys_read(int32_t fd, void *buf, uint32_t count)
         ret = (bytes_read == 0 ? -1 : (int32_t)bytes_read);
     }
     else
-    {
-        uint32_t _fd = fd_local2global(fd);
         ret = file_read(&file_table[_fd], buf, count);
-    }
     return ret;
 }
 
@@ -1086,4 +1091,22 @@ int32_t sys_stat(const char *path, struct stat *buf)
 void sys_putchar(char char_asci)
 {
     console_put_char(char_asci);
+}
+
+/* 显示系统支持的内部命令 */
+void sys_help(void)
+{
+    printk("\
+ buildin commands:\n\
+       ls: show directory or file information\n\
+       cd: change current work directory\n\
+       mkdir: create a directory\n\
+       rmdir: remove a empty directory\n\
+       rm: remove a regular file\n\
+       pwd: show current work directory\n\
+       ps: show process information\n\
+       clear: clear screen\n\
+ shortcut key:\n\
+       ctrl+l: clear screen\n\
+       ctrl+u: clear input\n\n");
 }

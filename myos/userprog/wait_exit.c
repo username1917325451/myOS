@@ -62,6 +62,9 @@ static void release_prog_resource(struct task_struct *release_thread)
     mfree_page(PF_KERNEL, user_vaddr_pool_bitmap, bitmap_pg_cnt);
 
     /* 关闭进程打开的文件 */
+    /*
+        是否需要考虑标准输入或输入重定向到管道的情况 ??
+    */
     uint8_t local_fd = 3;
     while (local_fd < MAX_FILES_OPEN_PER_PROC)
     {

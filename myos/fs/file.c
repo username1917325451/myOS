@@ -472,7 +472,10 @@ int32_t file_write(struct file *file, const void *buf, uint32_t count)
         }
         memcpy(io_buf + sec_off_bytes, src, chunk_size);
         ide_write(cur_part->my_disk, sec_lba, io_buf, 1);
-        printk("file write at lba 0x%x\n", sec_lba); // 调试,完成后去掉
+        // printk("file_write: write\n");
+        // printk("%s\n", io_buf + sec_off_bytes);
+        // printk("file_write : over:\n");
+        // printk("file write at lba 0x%x\n", sec_lba); // 调试,完成后去掉
 
         src += chunk_size;                    // 将指针推移到下个新数据
         file->fd_inode->i_size += chunk_size; // 更新文件大小
@@ -503,6 +506,7 @@ int32_t file_read(struct file *file, void *buf, uint32_t count)
             return -1;
         }
     }
+    // printk("file_read : ready read %d bytes from file\n", size);
 
     uint8_t *io_buf = sys_malloc(BLOCK_SIZE);
     if (io_buf == NULL)
@@ -591,6 +595,9 @@ int32_t file_read(struct file *file, void *buf, uint32_t count)
         memset(io_buf, 0, BLOCK_SIZE);
         ide_read(cur_part->my_disk, sec_lba, io_buf, 1);
         memcpy(buf_dst, io_buf + sec_off_bytes, chunk_size);
+        // printk("file_read: read :\n");
+        // printk("%s\n", io_buf + sec_off_bytes);
+        // printk("file_read: over\n");
 
         buf_dst += chunk_size;
         file->fd_pos += chunk_size;

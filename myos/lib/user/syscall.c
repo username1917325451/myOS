@@ -218,4 +218,3 @@ void help(void)
 {
     _syscall0(SYS_HELP);
 }
-

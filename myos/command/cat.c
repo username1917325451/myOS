@@ -44,19 +44,27 @@ int main(int argc, char **argv)
     int fd = open(abs_path, O_RDONLY);
     if (fd == -1)
     {
-        printf("cat: open: open %s failed\n", argv[1]);
-        return -1;
+        // 文件不存在就创建文件
+        fd = open(abs_path, O_CREAT | O_RDONLY);
+        return 0;
+        if(fd == -1)
+        {
+            printf("cat: open: open %s failed\n", argv[1]);
+            return -1;
+        }
     }
     // printf("cat the file : %s\n", abs_path);
     int read_bytes = 0;
     while (1)
     {
         read_bytes = read(fd, buf, buf_size);
+        // printf("cat : read %dbytes from file  %s\n", read_bytes, buf);
         if (read_bytes == -1)
         {
             break;
         }
         write(1, buf, read_bytes);
+        // printf("cat : write %dbytes\n", cn);
     }
     free(buf);
     close(fd);

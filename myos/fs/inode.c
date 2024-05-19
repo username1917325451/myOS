@@ -40,7 +40,7 @@ static void inode_locate(struct partition *part, uint32_t inode_no, struct inode
     inode_pos->off_size = off_size_in_sec;
 }
 
-// 将inode写入到分区part,io_buf是缓冲区
+// 将inode写入到磁盘的分区part,io_buf是缓冲区
 void inode_sync(struct partition *part, struct inode *inode, void *io_buf)
 { // io_buf是用于硬盘io的缓冲区
     uint8_t inode_no = inode->i_no;

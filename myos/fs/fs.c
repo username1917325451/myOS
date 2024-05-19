@@ -165,7 +165,7 @@ static bool mount_partition(struct list_elem* pelem, int arg) {
 
         /* 读入超级块 */
         memset(sb_buf, 0, SECTOR_SIZE);
-        ide_read(hd, cur_part->start_lba + 1, sb_buf, 1);   
+        ide_read(hd, cur_part->start_lba + 1, sb_buf, 1);
 
         /* 把sb_buf中超级块的信息复制到分区的超级块sb中。*/
         memcpy(cur_part->sb, sb_buf, sizeof(struct super_block)); 
@@ -340,15 +340,8 @@ static int search_file(const char *pathname, struct path_search_record *searched
     }
 
     uint32_t path_len = strlen(pathname);
-    /* 保证pathname至少是这样的路径/x且小于最大长度 */
-    // ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
-    if(pathname[0] != '/'){
-        printk("!!!serch_file : %s\n",pathname);
-        return -1;
-    }
-    ASSERT(pathname[0] == '/');
-    ASSERT(path_len > 1);
-    ASSERT(path_len < MAX_PATH_LEN);
+    // 正常情况下pathname已经被处理成绝对路径了
+    ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
     char *sub_path = (char *)pathname;
     struct dir *parent_dir = &root_dir;
     struct dir_entry dir_e;
@@ -646,7 +639,7 @@ int32_t sys_read(int32_t fd, void *buf, uint32_t count)
     }
     else
         ret = file_read(&file_table[_fd], buf, count);
-    return ret;
+    return ret == 0 ? -1 : ret;
 }
 
 /* 重置用于文件读写操作的偏移指针,成功时返回新的偏移量,出错时返回-1 */
@@ -686,10 +679,154 @@ int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence)
     return pf->fd_pos;
 }
 
+/* 创建文件(非目录),成功返回0,失败返回-1*/
+int32_t sys_link(const char *pathname)
+{
+    if(strlen(pathname) > MAX_PATH_LEN)
+    {
+        printk("sys_unlink :the path is too long! use path that length is less than%d\n", MAX_PATH_LEN);
+        return -1;
+    }
+    // 直接调用sys_open创建文件,再关闭fd
+    /*
+        在根目录下创建文件夹或文件显示有延迟
+    */
+    // int fd = sys_open(pathname, O_WRONLY);
+    // // sys_write(fd, "this is a new file\n", 19);
+    // sys_close(fd);
+    // return 0;
+
+    /* 对目录要用dir_open,这里只有open文件 */
+    if (pathname[strlen(pathname) - 1] == '/')
+    {
+        printk("sys_link can`t create a directory %s\n", pathname);
+        return -1;
+    }
+    int fd = -1; // 默认为找不到
+
+    struct path_search_record searched_record;
+    memset(&searched_record, 0, sizeof(struct path_search_record));
+
+    /* 记录目录深度.帮助判断中间某个目录不存在的情况 */
+    uint32_t pathname_depth = path_depth_cnt((char *)pathname);
+
+    /* 先检查文件是否存在 */
+    int inode_no = search_file(pathname, &searched_record);
+    bool found = inode_no != -1 ? true : false;
+
+    if (searched_record.file_type == FT_DIRECTORY)
+    {
+        printk("can`t create a direcotry with mk\n");
+        dir_close(searched_record.parent_dir);
+        return -1;
+    }
+
+    uint32_t path_searched_depth = path_depth_cnt(searched_record.searched_path);
+
+    // 判断在文件以上的目录路径是否是正确的
+    if (pathname_depth != path_searched_depth)
+    { // 说明并没有访问到全部的路径,某个中间目录是不存在的
+        printk("cannot access %s: Not a directory, subpath %s is`t exist\n",
+               pathname, searched_record.searched_path);
+        dir_close(searched_record.parent_dir);
+        return -1;
+    }
+
+    // 找到了但是要创建的文件已经存在
+    if (found)
+    {
+        printk("%s has already exist!\n", pathname);
+        dir_close(searched_record.parent_dir);
+        return -1;
+    }
+
+    printk("creating file\n");
+    // fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/') + 1), O_CREAT);
+    //----------------------file_create------------------
+    char *filename = (strrchr(pathname, '/') + 1);
+    struct dir *parent_dir = searched_record.parent_dir;
+    /* 后续操作的公共缓冲区 */
+    void *io_buf = sys_malloc(1024);
+    if (io_buf == NULL)
+    {
+        printk("in file_creat: sys_malloc for io_buf failed\n");
+        return -1;
+    }
+
+    uint8_t rollback_step = 0; // 用于操作失败时回滚各资源状态
+
+    /* 为新文件分配inode(从文件系统磁盘中分配) */
+    inode_no = inode_bitmap_alloc(cur_part);
+    if (inode_no == -1)
+    {
+        printk("in file_creat: allocate inode failed\n");
+        goto rollback;
+    }
+    
+    /* 此inode要从堆中申请内存,不可生成局部变量(函数退出时会释放)
+     * 因为file_table数组中的文件描述符的inode指针要指向它.*/
+    struct inode *new_file_inode = (struct inode *)sys_malloc(sizeof(struct inode));
+    if (new_file_inode == NULL)
+    {
+        printk("file_create: sys_malloc for inode failded\n");
+        rollback_step = 1;
+        goto rollback;
+    }
+    inode_init(inode_no, new_file_inode); // 初始化i结点
+
+    struct dir_entry new_dir_entry;
+    memset(&new_dir_entry, 0, sizeof(struct dir_entry));
+
+    // 初始化新创建文件的目录项结构
+    create_dir_entry(filename, inode_no, FT_REGULAR, &new_dir_entry);
+    
+    // /* a 在目录parent_dir下安装目录项new_dir_entry, 写入硬盘后返回true,否则false */
+    if (!sync_dir_entry(parent_dir, &new_dir_entry, io_buf))
+    {
+        printk("sync dir_entry to disk failed\n");
+        rollback_step = 3;
+        goto rollback;
+    }
+
+    memset(io_buf, 0, 1024);
+    /* b 将父目录inode的内容同步到硬盘 */
+    inode_sync(cur_part, parent_dir->inode, io_buf);
+
+    memset(io_buf, 0, 1024);
+    /* c 将新创建文件的inode内容同步到硬盘 */
+    inode_sync(cur_part, new_file_inode, io_buf);
+
+    /* d 将inode_bitmap位图同步到硬盘 */
+    bitmap_sync(cur_part, inode_no, INODE_BITMAP);
+
+/*创建文件需要创建相关的多个资源,若某步失败则会执行到下面的回滚步骤 */
+rollback:
+    switch (rollback_step)
+    {
+    case 3:
+    case 2:
+        sys_free(new_file_inode);
+    case 1:
+        /* 如果新文件的i结点创建失败,之前位图中分配的inode_no也要恢复 */
+        bitmap_set(&cur_part->inode_bitmap, inode_no, 0);
+        break;
+    }
+    sys_free(io_buf);
+    //---------------------------------------------------------
+    dir_close(searched_record.parent_dir);
+
+    return 0;
+}
+
 /* 删除文件(非目录),成功返回0,失败返回-1 */
 int32_t sys_unlink(const char *pathname)
 {
-    ASSERT(strlen(pathname) < MAX_PATH_LEN);
+    // ASSERT(strlen(pathname) < MAX_PATH_LEN);
+    if(strlen(pathname) > MAX_PATH_LEN)
+    {
+        printk("sys_unlink :the path is too long! use path that length is less than%d\n", MAX_PATH_LEN);
+        return -1;
+    }
 
     /* 先检查待删除的文件是否存在 */
     struct path_search_record searched_record;
@@ -824,6 +961,7 @@ int32_t sys_mkdir(const char *pathname)
     p_de->f_type = FT_DIRECTORY;
     ide_write(cur_part->my_disk, new_dir_inode.i_sectors[0], io_buf, 1);
 
+    // 初始的inode大小为两个标准目录项的大小
     new_dir_inode.i_size = 2 * cur_part->sb->dir_entry_size;
 
     /* 在父目录中添加自己的目录项 */

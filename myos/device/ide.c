@@ -377,7 +377,7 @@ void ide_init() {
         }
 
         channel->expecting_intr = false;		   // 未向硬盘写入指令时不期待硬盘的中断
-        lock_init(&channel->lock);		     
+        lock_init(&channel->lock);
 
     /* 初始化为0,目的是向硬盘控制器请求数据后,硬盘驱动sema_down此信号量会阻塞线程,
     直到硬盘完成后通过发中断,由中断处理程序将此信号量sema_up,唤醒线程. */

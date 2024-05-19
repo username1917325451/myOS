@@ -152,6 +152,8 @@ void cmd_execute(uint32_t argc, char **argv)
         buildin_mkdir(argc, argv);
     else if (strcmp("rmdir", argv[0]) == 0)
         buildin_rmdir(argc, argv);
+    else if (strcmp("mk", argv[0]) == 0)
+        buildin_mk(argc, argv);
     else if (strcmp("rm", argv[0]) == 0)
         buildin_rm(argc, argv);
     else if (strcmp("help", argv[0]) == 0)
@@ -183,7 +185,12 @@ void cmd_execute(uint32_t argc, char **argv)
             }
             else
             {
-                execv(argv[0], argv);
+                if(file_stat.st_filetype == FT_DIRECTORY)
+                {
+                    printf("my_shell: cannot exec %s: it's a directory\n");
+                }
+                else
+                    execv(argv[0], argv);
             }
         }
     }
@@ -192,9 +199,15 @@ void cmd_execute(uint32_t argc, char **argv)
 void my_shell(void)
 {
     cwd_cache[0] = '/';
+    int flag = 0;
     while (1)
     {
         print_prompt();
+        if(!flag)
+        {
+            flag = 1;
+            printf("wait for init...\n");
+        }
         memset(final_path, 0, MAX_PATH_LEN);
         memset(cmd_line, 0, MAX_PATH_LEN);
         readline(cmd_line, MAX_PATH_LEN);

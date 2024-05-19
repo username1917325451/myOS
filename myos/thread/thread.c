@@ -207,7 +207,7 @@ void schedule() {
 
    /* 如果就绪队列中没有可运行的任务,就唤醒idle */
    if (list_empty(&thread_ready_list)) {
-      /* 
+      /*
          怎么确保idle已经被block了?
          : idle在被block之前就绪队列不可能为空
       */
@@ -246,7 +246,7 @@ void thread_block(enum task_status stat) {
    ASSERT(((stat == TASK_BLOCKED) || (stat == TASK_WAITING) || (stat == TASK_HANGING)));
    enum intr_status old_status = intr_disable();       //先关闭中断,因为涉及要修改阻塞队列，调度
    struct task_struct* cur_thread = running_thread();    //得到当前正在运行的进程的pcb地址
-   cur_thread->status = stat; // 置其状态为stat 
+   cur_thread->status = stat; // 置其状态为stat
    schedule();		      // 将当前线程换下处理器
 /* 待当前线程被解除阻塞后才继续运行下面的intr_set_status */
    intr_set_status(old_status);

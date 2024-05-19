@@ -4,6 +4,7 @@
 #include "file.h"
 #include "fs.h"
 #include "ioqueue.h"
+#include "stdioKernel.h"
 
 /* 判断文件描述符local_fd是否是管道 */
 bool is_pipe(uint32_t local_fd)
@@ -37,7 +38,7 @@ int32_t sys_pipe(int32_t pipefd[2])
     return 0;
 }
 
-/* 从管道中读数据,读取的字节数可能小于count */
+/* 从管道中读数据,读取的字节数可能小于count 读取数<=0 返回-1 */
 uint32_t pipe_read(int32_t fd, void *buf, uint32_t count)
 {
     char *buffer = buf;
@@ -50,13 +51,15 @@ uint32_t pipe_read(int32_t fd, void *buf, uint32_t count)
     /* 选择较小的数据读取量,避免阻塞 */
     uint32_t ioq_len = ioq_length(ioq);
     uint32_t size = ioq_len > count ? count : ioq_len;
+    // printk("pipe_read : sz :%d\n", size);
     while (bytes_read < size)
     {
         *buffer = ioq_getchar(ioq);
         bytes_read++;
         buffer++;
     }
-    return bytes_read;
+    // printk("pipe_read : end\n");
+    return bytes_read == 0 ? -1 : bytes_read;
 }
 
 /* 往管道中写数据,写入的字节数可能小于count */

@@ -124,6 +124,12 @@ int32_t lseek(int32_t fd, int32_t offset, uint8_t whence)
     return _syscall3(SYS_LSEEK, fd, offset, whence);
 }
 
+/* 创建文件pathname */
+int32_t link(const char *pathname)
+{
+    return _syscall1(SYS_LINK, pathname);
+}
+
 /* 删除文件pathname */
 int32_t unlink(const char *pathname)
 {

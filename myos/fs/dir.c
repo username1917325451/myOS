@@ -30,7 +30,7 @@ struct dir *dir_open(struct partition *part, uint32_t inode_no)
  * 找到后返回true并将其目录项存入dir_e,否则返回false */
 bool search_dir_entry(struct partition *part, struct dir *pdir, const char *name, struct dir_entry *dir_e)
 {
-    uint32_t block_cnt = 140; // 12个直接块+128个一级间接块=140块
+    uint32_t block_cnt = 12; // 12个直接块+128个一级间接块=140块
 
     /* 12个直接块大小+128个间接块,共560字节 */
     uint32_t *all_blocks = (uint32_t *)sys_malloc(48 + 512);
@@ -46,12 +46,13 @@ bool search_dir_entry(struct partition *part, struct dir *pdir, const char *name
         all_blocks[block_idx] = pdir->inode->i_sectors[block_idx];
         block_idx++;
     }
-    block_idx = 0;
-
+    
     if (pdir->inode->i_sectors[12] != 0)
     { // 若含有一级间接块表
         ide_read(part->my_disk, pdir->inode->i_sectors[12], all_blocks + 12, 1);
+        block_cnt = 140;
     }
+    block_idx = 0;
     /* 至此,all_blocks存储的是该文件或目录的所有扇区地址 */
 
     /* 写目录项的时候已保证目录项不跨扇区,

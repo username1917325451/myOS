@@ -17,6 +17,7 @@ enum SYSCALL_NR
     SYS_OPEN,
     SYS_CLOSE,
     SYS_LSEEK,
+    SYS_LINK,
     SYS_UNLINK,
     SYS_MKDIR,
     SYS_OPENDIR,
@@ -48,6 +49,7 @@ char *getcwd(char *buf, uint32_t size);
 int32_t open(char *pathname, uint8_t flag);
 int32_t close(int32_t fd);
 int32_t lseek(int32_t fd, int32_t offset, uint8_t whence);
+int32_t link(const char *pathname);
 int32_t unlink(const char *pathname);
 int32_t mkdir(const char *pathname);
 struct dir *opendir(const char *name);

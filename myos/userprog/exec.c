@@ -6,6 +6,7 @@
 #include "string.h"
 #include "thread.h"
 #include "stdioKernel.h"
+#include "pipe.h"
 
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
 typedef uint16_t Elf32_Half;
@@ -164,7 +165,7 @@ done:
     return ret;
 }
 
-/* 用path指向的程序替换当前进程 */
+/* 用path指向的程序替换当前进程,暂时不支持重定向到文件 */
 int32_t sys_execv(const char *path, const char *argv[])
 {
     uint32_t argc = 0;
@@ -175,8 +176,32 @@ int32_t sys_execv(const char *path, const char *argv[])
     int32_t entry_point = load(path);
     if (entry_point == -1)
     { // 若加载失败则返回-1
-        printk("sys_execv : the path %s is not a program\n", path);
-        return -1;
+        // 说明这是一个文件
+        // int fd = sys_open(path, O_WRONLY);
+        // if(fd == -1)
+        // {
+            printk("sys_execv : the path %s is not a program\n", path);
+            return -1;
+        // }
+        // if(is_pipe(0))
+        // {
+        //     //如果标准输入被重定向,代表输入是以管道的形式传进来的
+        //     char *buf = sys_malloc(512);
+        //     while (1)
+        //     {
+        //         int read_bytes = sys_read(0, buf, 512);
+        //         if (read_bytes == -1)
+        //         {
+        //             break;
+        //         }
+        //         int ac_len = strlen(buf) - 1;
+        //         printk("sys_execv : len:%d %d %s", ac_len, read_bytes, buf);
+        //         sys_write(fd, buf, ac_len <= 0 ? 0 : ac_len);
+        //     }
+        //     sys_free(buf);
+        // }
+        // sys_close(fd);
+        // return 0;
     }
 
     struct task_struct *cur = running_thread();

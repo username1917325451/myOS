@@ -164,7 +164,7 @@ kernel_init:
     call mem_cpy				                        ; 调用mem_cpy完成段复制
     add esp,12				                            ; 清理栈中压入的三个参数
 .PTNULL:
-    add ebx, edx				                            ; edx为program header大小,即e_phentsize,在此ebx指向下一个program header 
+    add ebx, edx				                        ; edx为program header大小,即e_phentsize,在此ebx指向下一个program header 
     loop .each_segment
     ret
 

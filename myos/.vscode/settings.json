@@ -20,6 +20,7 @@
         "ostream": "c",
         "sstream": "c",
         "streambuf": "c",
-        "memory_resource": "c"
+        "memory_resource": "c",
+        "console.h": "c"
     }
 }

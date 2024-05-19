@@ -330,6 +330,33 @@ int32_t buildin_rmdir(uint32_t argc, char **argv)
     return ret;
 }
 
+/* mk命令内建函数 */
+int32_t buildin_mk(uint32_t argc, char **argv)
+{
+    int32_t ret = -1;
+    if (argc != 2)
+    {
+        printf("mk: only support 1 argument!\n");
+    }
+    else
+    {
+        make_clear_abs_path(argv[1], final_path);
+        /* 若创建的不是根目录 */
+        if (strcmp("/", final_path))
+        {
+            if (link(final_path) == 0)
+            {
+                ret = 0;
+            }
+            else
+            {
+                printf("mk: add %s failed.\n", argv[1]);
+            }
+        }
+    }
+    return ret;
+}
+
 /* rm命令内建函数 */
 int32_t buildin_rm(uint32_t argc, char **argv)
 {

@@ -210,6 +210,7 @@ int32_t file_open(uint32_t inode_no, uint8_t flag)
         file_open涉及到公共资源的修改,是否需要关中断/上锁 ??
         -> false: file_open最终是通过系统调用来运行的,自然是关闭中断的状态
     */
+    ASSERT(intr_disable() == INTR_OFF);
     int fd_idx = get_free_slot_in_global();
     if (fd_idx == -1)
     {
@@ -224,8 +225,7 @@ int32_t file_open(uint32_t inode_no, uint8_t flag)
     if (flag & O_WRONLY || flag & O_RDWR)
     { 
         // 若是读文件,不考虑write_deny
-        // 是选择关中断还是上锁??
-        enum intr_status old_status = intr_disable();
+        enum intr_status old_status = intr_disable(); // 多此一举 ??
         bool *write_deny = &file_table[fd_idx].fd_inode->write_deny;
         if (!(*write_deny))
         {                                // 若当前没有其它进程写该文件,将其占用.

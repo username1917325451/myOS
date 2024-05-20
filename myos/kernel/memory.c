@@ -455,6 +455,8 @@ static struct arena* block2arena(struct mem_block* b) {
 
 // 在堆中申请size字节内存, 返回虚拟地址
 void* sys_malloc(uint32_t size) {
+	/*sys_malloc并不一定是在关中断的状态下调用的*/
+	// ASSERT(intr_get_status() != INTR_ON);
 	enum pool_flags PF;
 	struct pool* mem_pool;
 	uint32_t pool_size;

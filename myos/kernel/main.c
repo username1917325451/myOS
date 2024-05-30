@@ -9,24 +9,23 @@
 #include "ide.h"
 #include "stdioKernel.h"
 
-void init(void);
 void k_thread_a(void*);
 void k_thread_b(void*);
 void u_prog_a(void);
 void u_prog_b(void);
-int test_var_a = 0, test_var_b = 0;
+
+void init(void);
 int main(void)
 {
     put_str("I am kernel\n");
-
     init_all();
 
-    // uint32_t file_size = 10564;
+    // uint32_t file_size = 10672;
     // uint32_t sec_cnt = DIV_ROUND_UP(file_size, 512);
     // struct disk *sda = &channels[0].devices[0];
     // void *prog_buf = sys_malloc(file_size);
     // ide_read(sda, 300, prog_buf, sec_cnt);
-    // int32_t fd = sys_open("/cat", O_CREAT | O_RDWR);
+    // int32_t fd = sys_open("/prog_pipe", O_CREAT | O_RDWR);
     // if (fd != -1)
     // {
     //     if (sys_write(fd, prog_buf, file_size) == -1)
@@ -37,10 +36,6 @@ int main(void)
     // }
     // sys_close(fd);
 
-    // int fd = sys_open("/file5", O_CREAT);
-    // sys_close(fd);
-
-    
 
     cls_screen();
     console_put_str("[rabbit@localhost /]$ ");
@@ -70,4 +65,58 @@ void init(void)
     }
     panic("init: should not be here");
 }
+//--------------------------------------------
 
+
+
+/* 在线程中运行的函数 */
+void k_thread_a(void* arg) {     
+   while(1)
+   {
+    int i = 0;
+    while(i<1000000)
+    {
+        i++;
+    }
+    printk("thread_a ");
+   }
+}
+
+/* 在线程中运行的函数 */
+void k_thread_b(void* arg) {     
+   while(1)
+   {
+    int i = 0;
+    while(i<1000000)
+    {
+        i++;
+    }
+    printk("thread_b ");
+   }
+}
+
+/* 测试用户进程 */
+void u_prog_a(void) {
+   while(1)
+   {
+    int i = 0;
+    while(i<1000000)
+    {
+        i++;
+    }
+    printf("u_prog_a ");
+   }
+}
+
+/* 测试用户进程 */
+void u_prog_b(void) {
+   while(1)
+   {
+    int i = 0;
+    while(i<1000000)
+    {
+        i++;
+    }
+    printf("u_prog_b ");
+   }
+}

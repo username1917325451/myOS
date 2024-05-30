@@ -1241,6 +1241,7 @@ void sys_help(void)
        pwd: show current work directory\n\
        ps: show process information\n\
        clear: clear screen\n\
+       echo: output to file\n\
  shortcut key:\n\
        ctrl+l: clear screen\n\
        ctrl+u: clear input\n\n");

@@ -15,7 +15,7 @@ struct inode {
     bool write_deny;	   // 写文件不能并行,进程写文件前检查此标识
 
     /* i_sectors[0-11]是直接块, i_sectors[12]用来存储一级间接块指针 */
-    uint32_t i_sectors[13];
+    uint32_t i_sectors[13]; //最大容量71,680字节,若采用三级块可以将容量提升至8,459,776字节
     struct list_elem inode_tag;
 };
 

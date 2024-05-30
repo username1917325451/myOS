@@ -31,7 +31,7 @@
 00000000000i[      ]   SB16 support: no
 00000000000i[      ]   USB support: no
 00000000000i[      ]   VGA extension support: vbe
-00000000000i[MEM0  ] allocated memory at 0x7f13a8977010. after alignment, vector=0x7f13a8978000
+00000000000i[MEM0  ] allocated memory at 0x7f83e17f4010. after alignment, vector=0x7f83e17f5000
 00000000000i[MEM0  ] 32.00MB
 00000000000i[MEM0  ] mem block size = 0x00100000, blocks=32
 00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/home/shenhaomin/work/bochs/share/bochs/BIOS-bochs-latest')
@@ -41,7 +41,7 @@
 00000000000i[DEV   ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] Using local time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Thu May 16 15:44:01 2024 (time0=1715845441)
+00000000000i[CMOS  ] Setting initial clock to: Sat May 25 15:24:16 2024 (time0=1716621856)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -181,27 +181,27 @@
 00001532168i[VBIOS ] VBE Bios $Id: vbe.c,v 1.65 2014/07/08 18:02:25 vruppert Exp $
 00001876695i[BIOS  ] ata0-0: PCHS=121/16/63 translation=none LCHS=121/16/63
 00001930728i[BIOS  ] ata0-1: PCHS=162/16/63 translation=none LCHS=162/16/63
-00003712136i[XGUI  ] charmap update. Font Height is 16
+00002312104i[XGUI  ] charmap update. Font Height is 16
 00014109267i[BIOS  ] Booting from 0000:7c00
-30322740000i[      ] Ctrl-C detected in signal handler.
-30322740006i[      ] dbg: Quit
-30322740006i[CPU0  ] CPU is in protected mode (halted)
-30322740006i[CPU0  ] CS.mode = 32 bit
-30322740006i[CPU0  ] SS.mode = 32 bit
-30322740006i[CPU0  ] EFER   = 0x00000000
-30322740006i[CPU0  ] | EAX=00000000  EBX=00000000  ECX=c0012ae0  EDX=c0013020
-30322740006i[CPU0  ] | ESP=c0119f6c  EBP=c0119f84  ESI=00000000  EDI=00000000
-30322740006i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf AF PF CF
-30322740006i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
-30322740006i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
-30322740006i[CPU0  ] |  DS:0033( 0006| 0|  3) 00000000 ffffffff 1 1
-30322740006i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-30322740006i[CPU0  ] |  ES:0033( 0006| 0|  3) 00000000 ffffffff 1 1
-30322740006i[CPU0  ] |  FS:0033( 0006| 0|  3) 00000000 ffffffff 1 1
-30322740006i[CPU0  ] |  GS:0000( 0000| 0|  0) 00000000 00000000 0 0
-30322740006i[CPU0  ] | EIP=c000407d (c000407d)
-30322740006i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
-30322740006i[CPU0  ] | CR3=0x00100000 CR4=0x00000000
-30322740006i[CMOS  ] Last time is 1715853021 (Thu May 16 17:50:21 2024)
-30322740006i[XGUI  ] Exit
-30322740006i[SIM   ] quit_sim called with exit code 0
+63457936000i[      ] Ctrl-C detected in signal handler.
+63457936002i[      ] dbg: Quit
+63457936002i[CPU0  ] CPU is in protected mode (halted)
+63457936002i[CPU0  ] CS.mode = 32 bit
+63457936002i[CPU0  ] SS.mode = 32 bit
+63457936002i[CPU0  ] EFER   = 0x00000000
+63457936002i[CPU0  ] | EAX=00000000  EBX=00000000  ECX=c0012ac0  EDX=c0013000
+63457936002i[CPU0  ] | ESP=c0119f6c  EBP=c0119f84  ESI=00000000  EDI=00000000
+63457936002i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf AF PF CF
+63457936002i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+63457936002i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
+63457936002i[CPU0  ] |  DS:0033( 0006| 0|  3) 00000000 ffffffff 1 1
+63457936002i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+63457936002i[CPU0  ] |  ES:0033( 0006| 0|  3) 00000000 ffffffff 1 1
+63457936002i[CPU0  ] |  FS:0033( 0006| 0|  3) 00000000 ffffffff 1 1
+63457936002i[CPU0  ] |  GS:0000( 0000| 0|  0) 00000000 00000000 0 0
+63457936002i[CPU0  ] | EIP=c000412d (c000412d)
+63457936002i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
+63457936002i[CPU0  ] | CR3=0x00100000 CR4=0x00000000
+63457936002i[CMOS  ] Last time is 1716637720 (Sat May 25 19:48:40 2024)
+63457936002i[XGUI  ] Exit
+63457936002i[SIM   ] quit_sim called with exit code 0

@@ -6,6 +6,7 @@
 #include "syscall.h"
 #include "shell.h"
 #include "stdio.h"
+#include "pipe.h"
 
 /* 将路径old_abs_path中的..和.转换为实际路径后存入new_abs_path */
 static void wash_path(char *old_abs_path, char *new_abs_path)
@@ -388,4 +389,67 @@ int32_t buildin_rm(uint32_t argc, char **argv)
 void buildin_help(uint32_t argc UNUSED, char **argv UNUSED)
 {
     help();
+}
+/* 输出字符串到文件 */
+void buildin_echo(uint32_t argc, char **argv)
+{
+    if(argc == 2)
+    {
+        // echo "hello" / echo 'hello' / echo hello
+        if(strlen(argv[1]) != 0)
+        {
+            write(1, argv[1], strlen(argv[1]));
+            write(1, "\n", 1);
+        }
+    }
+    else if(argc == 4)
+    {
+        // echo hello > file1
+        if(strcmp(argv[2], ">") != 0)
+        {
+            printf("echo: need >\n");
+            return;
+        }
+        int fd = open(argv[3], O_WRONLY);
+        if(fd == -1)
+        {
+            printf("echo: this file is not exit!\n");
+            return;
+        }
+        if(strlen(argv[1]) != 0)
+        {
+            write(fd, argv[1], strlen(argv[1]));
+            write(fd, "\n", 1);
+        }
+    }
+    else if(argc == 3)
+    {
+        // ...echo > file1
+        if(strcmp(argv[1], ">") != 0)
+        {
+            printf("echo: need >\n");
+            return;
+        }
+        int fd = open(argv[3], O_WRONLY);
+        if(fd == -1)
+        {
+            printf("echo: this file is not exit!\n");
+            return;
+        }
+        if(!is_pipe(1))
+        {
+            printf("echo: the input is not a pipe!\n");
+            return;
+        }
+        char buf[512] = {0};
+        // 从管道读取数据
+        int sz = 0;
+        sz = read(0, buf, 512);
+        if(sz != 0)
+        {
+            buf[sz] = '\n';
+            sz ++;
+            write(fd, buf, strlen(buf));
+        }
+    }
 }
